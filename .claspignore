@@ -1,0 +1,3 @@
+# rootDir is "src", so patterns are evaluated from src/.
+**/*.map
+**/node_modules/**
