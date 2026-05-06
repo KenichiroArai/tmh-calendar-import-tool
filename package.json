@@ -1,0 +1,24 @@
+{
+  "name": "tmh-calendar-import-tool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clasp": "clasp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KenichiroArai/tmh-calendar-import-tool.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KenichiroArai/tmh-calendar-import-tool/issues"
+  },
+  "homepage": "https://github.com/KenichiroArai/tmh-calendar-import-tool#readme",
+  "devDependencies": {
+    "@google/clasp": "^3.3.0"
+  }
+}
