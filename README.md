@@ -37,6 +37,20 @@ copy .clasp.json.example .clasp.json
 npm run clasp:pull
 ```
 
+5. GASエディタで Script Properties を設定
+
+GASエディタの「プロジェクトの設定」→「スクリプト プロパティ」に以下を設定:
+
+- `IMPORT_TARGET_FOLDER_ID`
+- `IMPORT_COMPLETED_FOLDER_ID`
+- `INTERMEDIATE_FILE_GENERATION_FOLDER_ID`
+- `CALENDAR_ID`
+
+6. GASエディタで「Drive（高度なGoogleサービス）」を有効化
+
+- GASエディタ左メニューの「サービス」から `Drive API` を追加してください。
+- 本ツールは `Drive.Files.copy(...)` を使用するため、`Drive API` の有効化が必須です。
+
 ## 日常運用コマンド
 
 変更確認:
