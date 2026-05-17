@@ -1,7 +1,14 @@
+/** Script Properties で必須となるキー */
+type ConfigKey =
+  | "IMPORT_TARGET_FOLDER_ID"
+  | "IMPORT_COMPLETED_FOLDER_ID"
+  | "INTERMEDIATE_FILE_GENERATION_FOLDER_ID"
+  | "CALENDAR_ID";
+
 /**
  * スケジュールをインポートする。
  */
-function importSchedule() {
+function importSchedule(): void {
   const scriptProperties = PropertiesService.getScriptProperties();
 
   /* フォルダの指定。全て同じフォルダIDに指定可能 */
@@ -12,8 +19,9 @@ function importSchedule() {
     "IMPORT_COMPLETED_FOLDER_ID",
   );
   // 中間ファイル生成
-  const INTERMEDIATE_FILE_GENERATION_FOLDER_ID =
-    getRequiredConfig_("INTERMEDIATE_FILE_GENERATION_FOLDER_ID");
+  const INTERMEDIATE_FILE_GENERATION_FOLDER_ID = getRequiredConfig_(
+    "INTERMEDIATE_FILE_GENERATION_FOLDER_ID",
+  );
 
   /* カレンダーIDの定義 */
   // カレンダーID
@@ -24,18 +32,22 @@ function importSchedule() {
    * @param {string} key キー
    * @return {string} 値
    */
-  function getRequiredConfig_(key) {
+  function getRequiredConfig_(key: ConfigKey): string {
     const value = scriptProperties.getProperty(key);
     if (!value) {
       throw new Error(
-        "Script Properties の設定値が未定義です。GASエディタで設定してください: " + key,
+        "Script Properties の設定値が未定義です。GASエディタで設定してください: " +
+          key,
       );
     }
     return value;
   }
 
   /* ドキュメントを作成する */
-  let convertedFileIds = createDocuments(IMPORT_TARGET_FOLDER_ID, INTERMEDIATE_FILE_GENERATION_FOLDER_ID);
+  let convertedFileIds = createDocuments(
+    IMPORT_TARGET_FOLDER_ID,
+    INTERMEDIATE_FILE_GENERATION_FOLDER_ID,
+  );
   if (convertedFileIds.length <= 0) {
     console.info("インポート対象に該当ファイルがありません。");
     return;
@@ -49,8 +61,8 @@ function importSchedule() {
   // return;
 
   /* テキストを出力する */
-  for (let convertedFileId of convertedFileIds) {
-    let text = getText(convertedFileId);
+  for (const convertedFileId of convertedFileIds) {
+    const text = getText(convertedFileId);
     const fileName = DriveApp.getFileById(convertedFileId).getName() + ".csv";
 
     // ファイル削除
@@ -66,8 +78,8 @@ function importSchedule() {
   }
 
   /* インポート対象のファイルをインポート完了に移動する。 */
-  let tagetFileIds = getTagetFileIds(IMPORT_TARGET_FOLDER_ID);
-  for (let targetFileId of tagetFileIds) {
+  const tagetFileIds = getTagetFileIds(IMPORT_TARGET_FOLDER_ID);
+  for (const targetFileId of tagetFileIds) {
     // ファイルの移動
     moveFileToFolder(targetFileId, IMPORT_COMPLETED_FOLDER_ID);
   }
@@ -75,9 +87,9 @@ function importSchedule() {
   /**
    * URLからIDを返す。
    */
-  function extractIdFromUrl(url) {
+  function extractIdFromUrl(url: string): string {
     // ドキュメントIDは "/d/" の後に続く部分で、次のスラッシュ "/" までです。
-    let idMatch = url.match(/\/d\/(.+?)\//);
+    const idMatch = url.match(/\/d\/(.+?)\//);
     if (idMatch && idMatch[1]) {
       return idMatch[1];
     } else {
@@ -90,16 +102,16 @@ function importSchedule() {
    * @param {string} folderId フォルダID
    * @return {string[]} イメージファイルID
    */
-  function getTagetFileIds(folderId) {
-    var result = [];
+  function getTagetFileIds(folderId: string): string[] {
+    const result: string[] = [];
 
-    let folder = DriveApp.getFolderById(folderId);
+    const folder = DriveApp.getFolderById(folderId);
 
-    let files = folder.getFiles();
+    const files = folder.getFiles();
     while (files.hasNext()) {
-      let file = files.next();
+      const file = files.next();
 
-      var mimeType = file.getMimeType();
+      const mimeType = file.getMimeType();
 
       // ファイルタイプが画像またはPDFではないか
       if (!(mimeType.startsWith("image/") || mimeType === "application/pdf")) {
@@ -118,19 +130,19 @@ function importSchedule() {
    * @param {string} fileId ファイルID
    * @param {string} excludedFileId 対象外ファイルID
    */
-  function deleteFileById(fileId, excludedFileId) {
+  function deleteFileById(fileId: string, excludedFileId: string): void {
     // ファイルIDからファイルを取得
-    var file = DriveApp.getFileById(fileId);
+    const file = DriveApp.getFileById(fileId);
 
     // ファイル名を取得
-    var fileName = file.getName();
+    const fileName = file.getName();
 
     // ファイル名に該当するファイルを検索
-    var files = DriveApp.getFilesByName(fileName);
+    const files = DriveApp.getFilesByName(fileName);
 
     // 該当するファイルを削除
     while (files.hasNext()) {
-      var fileToDelete = files.next();
+      const fileToDelete = files.next();
 
       // 該当するファイルが対象外か
       if (fileToDelete.getId() == excludedFileId) {
@@ -147,10 +159,10 @@ function importSchedule() {
    * ファイル名からファイルを削除する。
    * @param {string} fileName ファイル名
    */
-  function deleteFileByName(fileName) {
-    var files = DriveApp.getFilesByName(fileName);
+  function deleteFileByName(fileName: string): void {
+    const files = DriveApp.getFilesByName(fileName);
     while (files.hasNext()) {
-      var file = files.next();
+      const file = files.next();
       file.setTrashed(true);
     }
   }
@@ -161,26 +173,32 @@ function importSchedule() {
    * @param {string} outputFolderId 出力フォルダID
    * @return {string} ドキュメントID
    */
-  function createDocument(inputFileId, outputFolderId) {
-    var result = "";
+  function createDocument(inputFileId: string, outputFolderId: string): string {
+    const drive = Drive as unknown as GoogleAppsScript.Drive_v2;
+    if (!drive) {
+      throw new Error(
+        "Drive API が有効化されていません。GASエディタの「サービス」から Drive API を追加してください。",
+      );
+    }
 
-    let ocrOption = {
+    const ocrOption: Record<string, string | boolean> = {
       ocr: true,
       ocrLanguage: "ja",
     };
-    let ocrResource = {
+    const ocrResource: GoogleAppsScript.Drive.Schema.File = {
       mimeType: MimeType.GOOGLE_DOCS,
     };
-    let documentFile = Drive.Files.copy(ocrResource, inputFileId, ocrOption);
+    const documentFile = drive.Files.copy(ocrResource, inputFileId, ocrOption);
+    if (!documentFile.id) {
+      throw new Error("OCR 変換後のドキュメント ID を取得できませんでした。");
+    }
 
     // コピー先フォルダにファイルを移動
     DriveApp.getFileById(documentFile.id).moveTo(
       DriveApp.getFolderById(outputFolderId),
     );
 
-    result = documentFile.id;
-
-    return result;
+    return documentFile.id;
   }
 
   /**
@@ -188,11 +206,9 @@ function importSchedule() {
    * @param {string} documentFileId ドキュメントファイルID
    * @return {string} テキスト
    */
-  function getText(documentFileId) {
-    let result = "";
-    let documentFile = DocumentApp.openById(documentFileId);
-    result = documentFile.getBody().getText();
-    return result;
+  function getText(documentFileId: string): string {
+    const documentFile = DocumentApp.openById(documentFileId);
+    return documentFile.getBody().getText();
   }
 
   /**
@@ -201,11 +217,14 @@ function importSchedule() {
    * @param {string} outputFolderId 出力フォルダID
    * @return {string[]} ドキュメントIDの一覧
    */
-  function createDocuments(inputFolderId, outputFolderId) {
-    let result = [];
-    let tagetFileIds = getTagetFileIds(inputFolderId);
-    for (let targetFileId of tagetFileIds) {
-      let convertedFileId = createDocument(targetFileId, outputFolderId);
+  function createDocuments(
+    inputFolderId: string,
+    outputFolderId: string,
+  ): string[] {
+    const result: string[] = [];
+    const targetFileIds = getTagetFileIds(inputFolderId);
+    for (const targetFileId of targetFileIds) {
+      const convertedFileId = createDocument(targetFileId, outputFolderId);
       result.push(convertedFileId);
 
       // ファイルを削除する
@@ -223,13 +242,11 @@ function importSchedule() {
    * @return {string} インポートファイルID
    */
   function createCalendarImportFile(
-    folderId,
-    fileName,
-    contents,
-    outputFolderId,
-  ) {
-    let result = "";
-
+    folderId: string,
+    fileName: string,
+    contents: string,
+    outputFolderId: string,
+  ): string {
     const PATTERN_DATA = /.(\d+\/\d+)\(.\)(\d+:\d+).?(.*)/;
     const PATTERN_HEAD_SQUARE = /^■/;
 
@@ -237,8 +254,8 @@ function importSchedule() {
     let writeContents = "";
 
     /* 内容を行ごとにファイルに書き込む内容に設定する */
-    let contentsArrays = contents.split(/\n/);
-    for (line of contentsArrays) {
+    const contentsArrays = contents.split(/\n/);
+    for (const line of contentsArrays) {
       // 行にデータが無いか
       if (line == null) {
         // 無い場合
@@ -247,7 +264,7 @@ function importSchedule() {
       }
 
       // 行をトリムする
-      line_wk = line.trim();
+      const line_wk = line.trim();
       // データがあるか
       if (line_wk == "") {
         // データが無い場合
@@ -259,7 +276,7 @@ function importSchedule() {
       if (!line_wk.match(PATTERN_HEAD_SQUARE)) {
         // 先頭にない場合
 
-        let matchResult = line_wk.match(PATTERN_DATA);
+        const matchResult = line_wk.match(PATTERN_DATA);
         // データパーンに一致しないか
         if (!matchResult) {
           // 一致しない場合
@@ -284,9 +301,7 @@ function importSchedule() {
 
     writeContents = writeContents.substring(1, writeContents.length);
 
-    result = createCsvFile(folderId, fileName, writeContents, outputFolderId);
-
-    return result;
+    return createCsvFile(folderId, fileName, writeContents, outputFolderId);
   }
 
   /**
@@ -294,15 +309,18 @@ function importSchedule() {
    * @param {string} matchResult マッチ結果
    * @return {string} 書き込み中身
    */
-  function getWriteContents(matchResult) {
+  function getWriteContents(matchResult: RegExpMatchArray): string {
     let result = "";
 
     const PATTERN_SQUARE = /■/;
     const PATTERN_DATA2 = /(.+)■(\d+\/\d+)\(.\)(\d+:\d+).?(.*)/;
 
-    let matchResultSquare = matchResult[3].match(PATTERN_SQUARE);
+    const matchResultSquare = matchResult[3].match(PATTERN_SQUARE);
     if (matchResultSquare) {
-      matchResult2 = matchResult[3].match(PATTERN_DATA2);
+      const matchResult2 = matchResult[3].match(PATTERN_DATA2);
+      if (!matchResult2) {
+        return result;
+      }
       matchResult[3] = matchResult2[1];
 
       result += "\n";
@@ -349,9 +367,12 @@ function importSchedule() {
    * @param {string} outputFolderId 出力フォルダID
    * @return {string} CSVファイルID
    */
-  function createCsvFile(folderId, fileName, contents, outputFolderId) {
-    let result = "";
-
+  function createCsvFile(
+    folderId: string,
+    fileName: string,
+    contents: string,
+    outputFolderId: string,
+  ): string {
     const contentType = "text/csv"; // コンテンツタイプ
     const charset = "UTF-8"; // 文字コード
     const folder = DriveApp.getFolderById(folderId); // 出力するフォルダ
@@ -362,13 +383,12 @@ function importSchedule() {
     );
 
     const file = folder.createFile(blob);
-    result = file.getId();
 
     // ファイルを移動する
     const outputFolder = DriveApp.getFolderById(outputFolderId); // 移動先のフォルダ
     file.moveTo(outputFolder);
 
-    return result;
+    return file.getId();
   }
 
   /**
@@ -376,20 +396,23 @@ function importSchedule() {
    * @param {string} csvFileId CSVファイルID
    * @param {string} calendarId カレンダーID
    */
-  function importCSVtoCalendar(csvFileId, calendarId) {
-    var calendar = CalendarApp.getCalendarById(calendarId);
+  function importCSVtoCalendar(csvFileId: string, calendarId: string): void {
+    const calendar = CalendarApp.getCalendarById(calendarId);
+    if (!calendar) {
+      throw new Error("カレンダーが見つかりません: " + calendarId);
+    }
 
-    var file = DriveApp.getFileById(csvFileId);
-    var csvDatas = Utilities.parseCsv(file.getBlob().getDataAsString());
+    const file = DriveApp.getFileById(csvFileId);
+    const csvDatas = Utilities.parseCsv(file.getBlob().getDataAsString());
 
-    for (var line of csvDatas) {
+    for (const line of csvDatas) {
       const title = line[2];
       const year = new Date().getFullYear(); // TODO KenichiroArai 2024/12/30 今日より前であれば+1する
       const date = new Date(year + "/" + line[0]);
       const times = line[1].split(":");
-      const hours = times[0];
+      const hours = Number(times[0]);
       date.setHours(hours);
-      const minutes = times[1];
+      const minutes = Number(times[1]);
       date.setMinutes(minutes);
       const startTime = date;
       const endTime = date;
@@ -414,9 +437,11 @@ function importSchedule() {
    * @param {string} fileId ファイルID
    * @param {string} folderId フォルダID
    */
-  function moveFileToFolder(fileId, folderId) {
-    var file = DriveApp.getFileById(fileId);
-    var folder = DriveApp.getFolderById(folderId);
+  function moveFileToFolder(fileId: string, folderId: string): void {
+    const file = DriveApp.getFileById(fileId);
+    const folder = DriveApp.getFolderById(folderId);
     file.moveTo(folder);
   }
+
+  void extractIdFromUrl;
 }
