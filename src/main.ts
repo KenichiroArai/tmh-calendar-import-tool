@@ -52,13 +52,14 @@ function importSchedule(): void {
     console.info("インポート対象に該当ファイルがありません。");
     return;
   }
+  // TODO KenichiroArai 2026/05/19 分割用
+  // return;
 
-  // TODO KenichiroArai 2026/05/08 分割用
+  // TODO KenichiroArai 2026/05/19 分割用
   // let url =
   //   "https://docs.google.com/document/d/1psjqhg0trmUAtcnrC4mcLlFF7YnxugF0FJNix5bAM4Y/edit?usp=sharing";
   // let id = extractIdFromUrl(url);
   // let convertedFileIds = [id];
-  // return;
 
   /* テキストを出力する */
   for (const convertedFileId of convertedFileIds) {

@@ -15,11 +15,21 @@ npm install
 
 | パス | 説明 |
 | --- | --- |
-| `src/main.ts` | TypeScript のソース（編集はここ） |
-| `src/appsscript.json` | GAS マニフェスト |
-| `dist/` | `npm run build` の出力（`clasp push` の対象） |
+| `src/main.ts` | TypeScript のソース（**編集はここだけ**） |
+| `src/appsscript.json` | GAS マニフェスト（ビルド時に `dist/` へコピー） |
+| `dist/main.js` | `npm run build` で生成される JavaScript |
+| `dist/appsscript.json` | 上記マニフェストのコピー |
 
-`clasp` の `rootDir` は `dist` です。GAS へ反映する前に必ずビルドしてください。
+`src/` には TypeScript とマニフェストのみを置きます。**`src/main.js` は不要**です（ビルド成果物は `dist/` に出力されます）。
+
+`clasp` の `rootDir` は **`dist`** です。GAS へ反映する前に必ずビルドしてください。
+
+```
+src/main.ts  ──npm run build──▶  dist/main.js
+src/appsscript.json  ──────────▶  dist/appsscript.json
+                                      │
+                                      └── clasp push ──▶ GAS
+```
 
 ## 初期セットアップ
 
@@ -35,11 +45,12 @@ npm run clasp:login
 copy .clasp.json.example .clasp.json
 ```
 
-3. `.clasp.json` の `YOUR_SCRIPT_ID` を実際の Script ID に置き換え
+3. `.clasp.json` を編集
 
-- Script ID は GAS エディタ URL の `/d/` と `/edit` の間の文字列です。
-- `rootDir` は `dist` です（ビルド成果物を GAS に同期します）。
-- マニフェストは `src/appsscript.json` にあり、ビルド時に `dist/` へコピーされます。
+- `YOUR_SCRIPT_ID` を実際の Script ID に置き換える
+- `rootDir` が **`dist`** であることを確認する（`src` のままだと push 先に実行用の `.js` が含まれません）
+
+Script ID は GAS エディタ URL の `/d/` と `/edit` の間の文字列です。
 
 4. リモートの GAS コードをローカルに取り込む（初回のみ推奨）
 
@@ -47,7 +58,7 @@ copy .clasp.json.example .clasp.json
 npm run clasp:pull
 ```
 
-以降の開発では `src/main.ts` を編集し、`npm run build` で `dist/` を生成してから push してください。
+`rootDir` が `dist` の場合、取得したファイルは `dist/` に入ります。以降の開発では **`src/main.ts` を編集**し、`npm run build` で `dist/` を再生成してから push してください。
 
 5. GAS エディタで Script Properties を設定
 
@@ -62,7 +73,6 @@ GAS エディタの「プロジェクトの設定」→「スクリプト プロ
 
 - GAS エディタ左メニューの「サービス」から `Drive API` を追加してください。
 - 本ツールは `Drive.Files.copy(...)` を使用するため、`Drive API` の有効化が必須です。
-- `src/appsscript.json` にも Drive API v2 の設定を含めています。`clasp push` 後にエディタ側の設定と一致しているか確認してください。
 
 ## 日常運用コマンド
 
@@ -78,7 +88,7 @@ npm run typecheck
 npm run build
 ```
 
-変更確認:
+変更確認（ビルド後に `dist/` と GAS を比較）:
 
 ```bash
 npm run clasp:status
@@ -110,6 +120,6 @@ npm run clasp:logout
 ## 補足
 
 - `.clasp.json` は `scriptId` を含むため `.gitignore` で除外しています。
-- 既存の `.clasp.json` で `rootDir` が `src` の場合は `dist` に変更してください。
-- `dist/` はビルド生成物のため Git 管理対象外です。
-- 同期除外は `.claspignore` で制御しています。
+- `dist/` はビルド生成物のため Git 管理対象外です。手で編集しないでください。
+- `src/main.js` や `src/main.gs` ができた場合は、TypeScript 運用では不要です。削除して `src/main.ts` から `npm run build` してください。
+- 同期除外は `.claspignore` で制御しています（`rootDir` が `dist` のときは `dist/` 配下が対象です）。
