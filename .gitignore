@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # clasp local config (contains scriptId)
 .clasp.json
+
+# ローカルのスクリプトプロパティファイル（個人設定値などを含むためバージョン管理対象外）
+.script-properties.local
