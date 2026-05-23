@@ -1,3 +1,9 @@
+/** ログシート名 */
+const LOG_SHEET_NAME = "ログ";
+
+/** スプレッドシートのセルの最大文字数 */
+const MAX_CELL_LENGTH = 50000;
+
 /** Script Properties で必須となるキー */
 type ConfigKey =
   | "IMPORT_TARGET_FOLDER_ID"
@@ -6,9 +12,76 @@ type ConfigKey =
   | "CALENDAR_ID";
 
 /**
+ * メイン関数。確認ダイアログを表示する。
+ */
+function myFunction(): void {
+  showConfirmationDialog();
+}
+
+/**
+ * 確認ダイアログを表示し、ユーザーの選択に応じて処理を実行する。
+ */
+function showConfirmationDialog(): void {
+  const ui = Browser.msgBox(
+    "確認",
+    "スケジュールインポートを実行しますか？",
+    Browser.Buttons.YES_NO,
+  );
+
+  if (ui === "yes") {
+    importSchedule();
+  } else {
+    Logger.log("操作はキャンセルされました。");
+  }
+}
+
+/**
+ * 指定されたメッセージをログシートに書き込む。
+ * @param message ログメッセージ
+ */
+function writeLog(message: string): void {
+  console.log(message);
+
+  const logSheet =
+    SpreadsheetApp.getActiveSpreadsheet().getSheetByName(LOG_SHEET_NAME);
+  if (!logSheet) {
+    throw new Error(
+      "ログシートが見つかりません。シート名「" + LOG_SHEET_NAME + "」を確認してください。",
+    );
+  }
+
+  let lastRow = logSheet.getLastRow();
+
+  while (message.length > MAX_CELL_LENGTH) {
+    logSheet
+      .getRange(lastRow + 1, 1)
+      .setValue(message.substring(0, MAX_CELL_LENGTH));
+    message = message.substring(MAX_CELL_LENGTH);
+    lastRow++;
+  }
+
+  logSheet.getRange(lastRow + 1, 1).setValue(message);
+}
+
+/**
  * スケジュールをインポートする。
  */
 function importSchedule(): void {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const logSheet = ss.getSheetByName(LOG_SHEET_NAME);
+  if (!logSheet) {
+    throw new Error(
+      "ログシートが見つかりません。シート名「" + LOG_SHEET_NAME + "」を確認してください。",
+    );
+  }
+
+  logSheet.clear();
+
+  writeLog("---------- カレンダーインポートツールを開始します。 ----------");
+
+  let hasError = false;
+  let hasWarning = false;
+
   const scriptProperties = PropertiesService.getScriptProperties();
 
   /* フォルダの指定。全て同じフォルダIDに指定可能 */
@@ -43,46 +116,108 @@ function importSchedule(): void {
     return value;
   }
 
-  /* ドキュメントを作成する */
-  let convertedFileIds = createDocuments(
-    IMPORT_TARGET_FOLDER_ID,
-    INTERMEDIATE_FILE_GENERATION_FOLDER_ID,
-  );
-  if (convertedFileIds.length <= 0) {
-    console.info("インポート対象に該当ファイルがありません。");
-    return;
-  }
-  // TODO KenichiroArai 2026/05/19 分割用
-  // return;
+  try {
+    writeLog("----- 設定情報を取得します。 -----");
+    writeLog(`インポート対象フォルダID：[${IMPORT_TARGET_FOLDER_ID}]`);
+    writeLog(`インポート完了フォルダID：[${IMPORT_COMPLETED_FOLDER_ID}]`);
+    writeLog(
+      `中間ファイル生成フォルダID：[${INTERMEDIATE_FILE_GENERATION_FOLDER_ID}]`,
+    );
+    writeLog(`カレンダーID：[${CALENDAR_ID}]`);
+    writeLog("----- 設定情報を取得しました。 -----");
 
-  // TODO KenichiroArai 2026/05/19 分割用
-  // let url =
-  //   "https://docs.google.com/document/d/1psjqhg0trmUAtcnrC4mcLlFF7YnxugF0FJNix5bAM4Y/edit?usp=sharing";
-  // let id = extractIdFromUrl(url);
-  // let convertedFileIds = [id];
-
-  /* テキストを出力する */
-  for (const convertedFileId of convertedFileIds) {
-    const text = getText(convertedFileId);
-    const fileName = DriveApp.getFileById(convertedFileId).getName() + ".csv";
-
-    // ファイル削除
-    deleteFileByName(fileName);
-
-    const fileId = createCalendarImportFile(
+    /* ドキュメントを作成する */
+    writeLog("----- ドキュメントを作成します。 -----");
+    let convertedFileIds = createDocuments(
       IMPORT_TARGET_FOLDER_ID,
-      fileName,
-      text,
       INTERMEDIATE_FILE_GENERATION_FOLDER_ID,
     );
-    importCSVtoCalendar(fileId, CALENDAR_ID);
-  }
+    if (convertedFileIds.length <= 0) {
+      writeLog("インポート対象に該当ファイルがありません。");
+      hasWarning = true;
+      return;
+    }
+    writeLog(`変換ドキュメント数：[${convertedFileIds.length}]`);
+    writeLog("----- ドキュメントを作成しました。 -----");
+    // TODO KenichiroArai 2026/05/19 分割用
+    // return;
 
-  /* インポート対象のファイルをインポート完了に移動する。 */
-  const tagetFileIds = getTagetFileIds(IMPORT_TARGET_FOLDER_ID);
-  for (const targetFileId of tagetFileIds) {
-    // ファイルの移動
-    moveFileToFolder(targetFileId, IMPORT_COMPLETED_FOLDER_ID);
+    // TODO KenichiroArai 2026/05/19 分割用
+    // let url =
+    //   "https://docs.google.com/document/d/1psjqhg0trmUAtcnrC4mcLlFF7YnxugF0FJNix5bAM4Y/edit?usp=sharing";
+    // let id = extractIdFromUrl(url);
+    // let convertedFileIds = [id];
+
+    /* テキストを出力する */
+    writeLog("----- カレンダーへインポートします。 -----");
+    for (const convertedFileId of convertedFileIds) {
+      const documentFile = DriveApp.getFileById(convertedFileId);
+      writeLog(
+        `--- ファイル名：[${documentFile.getName()}], ファイルID：[${convertedFileId}] の処理 ---`,
+      );
+      writeLog("開始します。");
+      try {
+        const text = getText(convertedFileId);
+        const fileName = documentFile.getName() + ".csv";
+
+        deleteFileByName(fileName);
+
+        const fileId = createCalendarImportFile(
+          IMPORT_TARGET_FOLDER_ID,
+          fileName,
+          text,
+          INTERMEDIATE_FILE_GENERATION_FOLDER_ID,
+        );
+        writeLog(`CSVファイルID：[${fileId}]`);
+        importCSVtoCalendar(fileId, CALENDAR_ID);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        writeLog("エラーが発生しました: " + message);
+        hasWarning = true;
+        continue;
+      }
+      writeLog("終了しました。");
+    }
+    writeLog("----- カレンダーへインポートしました。 -----");
+
+    /* インポート対象のファイルをインポート完了に移動する。 */
+    writeLog("----- インポート対象ファイルを移動します。 -----");
+    const tagetFileIds = getTagetFileIds(IMPORT_TARGET_FOLDER_ID);
+    for (const targetFileId of tagetFileIds) {
+      moveFileToFolder(targetFileId, IMPORT_COMPLETED_FOLDER_ID);
+      writeLog(`ファイルID：[${targetFileId}] をインポート完了フォルダへ移動しました。`);
+    }
+    writeLog("----- インポート対象ファイルを移動しました。 -----");
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    writeLog("エラーが発生しました: " + message);
+    hasError = true;
+  } finally {
+    writeLog(
+      "---------- カレンダーインポートツールが全て終了しました。 ----------",
+    );
+
+    if (hasError) {
+      Browser.msgBox(
+        "失敗",
+        "スケジュールのインポートに失敗しました。ログを確認してください。",
+        Browser.Buttons.OK,
+      );
+      return;
+    }
+    if (hasWarning) {
+      Browser.msgBox(
+        "警告",
+        "スケジュールのインポートに警告がありました。ログを確認してください。",
+        Browser.Buttons.OK,
+      );
+      return;
+    }
+    Browser.msgBox(
+      "成功",
+      "スケジュールのインポートに成功しました。",
+      Browser.Buttons.OK,
+    );
   }
 
   /**
@@ -225,11 +360,17 @@ function importSchedule(): void {
     const result: string[] = [];
     const targetFileIds = getTagetFileIds(inputFolderId);
     for (const targetFileId of targetFileIds) {
+      const inputFile = DriveApp.getFileById(targetFileId);
+      writeLog(
+        `--- ファイル名：[${inputFile.getName()}], ファイルID：[${targetFileId}] のOCR変換 ---`,
+      );
+      writeLog("開始します。");
       const convertedFileId = createDocument(targetFileId, outputFolderId);
+      writeLog(`変換ドキュメントID：[${convertedFileId}]`);
       result.push(convertedFileId);
 
-      // ファイルを削除する
       deleteFileById(convertedFileId, convertedFileId);
+      writeLog("終了しました。");
     }
     return result;
   }
@@ -419,12 +560,15 @@ function importSchedule(): void {
       const endTime = date;
       const description = line[3];
 
-      console.log(
-        "【カレンダーインポートデータ】title:%s, startTime:%s, endTime:%s, description:%s",
-        title,
-        startTime,
-        endTime,
-        description,
+      writeLog(
+        "【カレンダーインポートデータ】title:" +
+          title +
+          ", startTime:" +
+          startTime +
+          ", endTime:" +
+          endTime +
+          ", description:" +
+          description,
       );
 
       calendar.createEvent(title, startTime, endTime, {
