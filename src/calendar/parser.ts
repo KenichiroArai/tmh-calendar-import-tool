@@ -1,7 +1,7 @@
 /**
  * 書き込み中身を返す。
- * @param matchResult マッチ結果
- * @return 書き込み中身
+ * @param {string} matchResult マッチ結果
+ * @return {string} 書き込み中身
  */
 function getWriteContents(matchResult: RegExpMatchArray): string {
   let result = "";
@@ -54,12 +54,12 @@ function getWriteContents(matchResult: RegExpMatchArray): string {
 }
 
 /**
- * カレンダーのインポート用 CSV ファイルを作成する。
- * @param folderId フォルダID
- * @param fileName ファイル名
- * @param contents 中身
- * @param outputFolderId 出力フォルダID
- * @return インポートファイルID
+ * カレンダーのインポートファイルを作成する。
+ * @param {string} folderId フォルダID
+ * @param {string} fileName ファイル名
+ * @param {string} contents 中身
+ * @param {string} outputFolderId 出力フォルダID
+ * @return {string} インポートファイルID
  */
 function createCalendarImportFile(
   folderId: string,
@@ -70,27 +70,44 @@ function createCalendarImportFile(
   const PATTERN_DATA = /.(\d+\/\d+)\(.\)(\d+:\d+).?(.*)/;
   const PATTERN_HEAD_SQUARE = /^■/;
 
+  // ファイルに書き込む内容
   let writeContents = "";
 
+  /* 内容を行ごとにファイルに書き込む内容に設定する */
   const contentsArrays = contents.split(/\n/);
   for (const line of contentsArrays) {
+    // 行にデータが無いか
     if (line == null) {
+      // 無い場合
+
       continue;
     }
 
+    // 行をトリムする
     const line_wk = line.trim();
+    // データがあるか
     if (line_wk == "") {
+      // データが無い場合
+
       continue;
     }
 
+    // ■が先頭にないか
     if (!line_wk.match(PATTERN_HEAD_SQUARE)) {
+      // 先頭にない場合
+
       const matchResult = line_wk.match(PATTERN_DATA);
+      // データパーンに一致しないか
       if (!matchResult) {
+        // 一致しない場合
+
         writeContents += line_wk;
+
         continue;
       }
 
       writeContents += getWriteContents(matchResult);
+
       continue;
     }
 

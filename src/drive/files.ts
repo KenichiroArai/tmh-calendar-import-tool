@@ -1,27 +1,36 @@
 /**
  * ファイルIDからファイルを削除する。
- * @param fileId ファイルID
- * @param excludedFileId 対象外ファイルID
+ * @param {string} fileId ファイルID
+ * @param {string} excludedFileId 対象外ファイルID
  */
 function deleteFileById(fileId: string, excludedFileId: string): void {
+  // ファイルIDからファイルを取得
   const file = DriveApp.getFileById(fileId);
+
+  // ファイル名を取得
   const fileName = file.getName();
+
+  // ファイル名に該当するファイルを検索
   const files = DriveApp.getFilesByName(fileName);
 
+  // 該当するファイルを削除
   while (files.hasNext()) {
     const fileToDelete = files.next();
 
+    // 該当するファイルが対象外か
     if (fileToDelete.getId() == excludedFileId) {
+      // 対象外の場合
+
       continue;
     }
 
-    fileToDelete.setTrashed(true);
+    fileToDelete.setTrashed(true); // ファイルをゴミ箱に移動
   }
 }
 
 /**
  * ファイル名からファイルを削除する。
- * @param fileName ファイル名
+ * @param {string} fileName ファイル名
  */
 function deleteFileByName(fileName: string): void {
   const files = DriveApp.getFilesByName(fileName);
@@ -33,8 +42,8 @@ function deleteFileByName(fileName: string): void {
 
 /**
  * ファイルを移動する。
- * @param fileId ファイルID
- * @param folderId フォルダID
+ * @param {string} fileId ファイルID
+ * @param {string} folderId フォルダID
  */
 function moveFileToFolder(fileId: string, folderId: string): void {
   const file = DriveApp.getFileById(fileId);

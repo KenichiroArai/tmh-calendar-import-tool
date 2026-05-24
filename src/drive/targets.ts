@@ -1,7 +1,7 @@
 /**
  * フォルダIDに該当する対象ファイルIDの一覧を取得する。
- * @param folderId フォルダID
- * @return イメージファイルID
+ * @param {string} folderId フォルダID
+ * @return {string[]} イメージファイルID
  */
 function getTagetFileIds(folderId: string): string[] {
   const result: string[] = [];
@@ -14,7 +14,9 @@ function getTagetFileIds(folderId: string): string[] {
 
     const mimeType = file.getMimeType();
 
+    // ファイルタイプが画像またはPDFではないか
     if (!(mimeType.startsWith("image/") || mimeType === "application/pdf")) {
+      // 画像またはPDFではない
       continue;
     }
 

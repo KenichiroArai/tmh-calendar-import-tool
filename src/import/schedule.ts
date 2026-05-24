@@ -17,13 +17,20 @@ function importSchedule(): void {
   let hasError = false;
   let hasWarning = false;
 
+  /* フォルダの指定。全て同じフォルダIDに指定可能 */
+  // インポート対象
   const IMPORT_TARGET_FOLDER_ID = getRequiredConfig("IMPORT_TARGET_FOLDER_ID");
+  // インポート完了
   const IMPORT_COMPLETED_FOLDER_ID = getRequiredConfig(
     "IMPORT_COMPLETED_FOLDER_ID",
   );
+  // 中間ファイル生成
   const INTERMEDIATE_FILE_GENERATION_FOLDER_ID = getRequiredConfig(
     "INTERMEDIATE_FILE_GENERATION_FOLDER_ID",
   );
+
+  /* カレンダーIDの定義 */
+  // カレンダーID
   const CALENDAR_ID = getRequiredConfig("CALENDAR_ID");
 
   try {
@@ -36,8 +43,9 @@ function importSchedule(): void {
     writeLog(`カレンダーID：[${CALENDAR_ID}]`);
     writeLog("----- 設定情報を取得しました。 -----");
 
+    /* ドキュメントを作成する */
     writeLog("----- ドキュメントを作成します。 -----");
-    const convertedFileIds = createDocuments(
+    let convertedFileIds = createDocuments(
       IMPORT_TARGET_FOLDER_ID,
       INTERMEDIATE_FILE_GENERATION_FOLDER_ID,
     );
@@ -48,7 +56,16 @@ function importSchedule(): void {
     }
     writeLog(`変換ドキュメント数：[${convertedFileIds.length}]`);
     writeLog("----- ドキュメントを作成しました。 -----");
+    // TODO KenichiroArai 2026/05/19 分割用
+    // return;
 
+    // TODO KenichiroArai 2026/05/19 分割用
+    // let url =
+    //   "https://docs.google.com/document/d/1psjqhg0trmUAtcnrC4mcLlFF7YnxugF0FJNix5bAM4Y/edit?usp=sharing";
+    // let id = extractIdFromUrl(url);
+    // let convertedFileIds = [id];
+
+    /* テキストを出力する */
     writeLog("----- カレンダーへインポートします。 -----");
     for (const convertedFileId of convertedFileIds) {
       const documentFile = DriveApp.getFileById(convertedFileId);
@@ -80,6 +97,7 @@ function importSchedule(): void {
     }
     writeLog("----- カレンダーへインポートしました。 -----");
 
+    /* インポート対象のファイルをインポート完了に移動する。 */
     writeLog("----- インポート対象ファイルを移動します。 -----");
     const tagetFileIds = getTagetFileIds(IMPORT_TARGET_FOLDER_ID);
     for (const targetFileId of tagetFileIds) {
@@ -120,4 +138,6 @@ function importSchedule(): void {
       Browser.Buttons.OK,
     );
   }
+
+  void extractIdFromUrl;
 }

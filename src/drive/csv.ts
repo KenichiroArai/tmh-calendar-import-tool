@@ -1,10 +1,10 @@
 /**
- * CSVファイルを作成する。
- * @param folderId フォルダID
- * @param fileName ファイル名
- * @param contents ファイルの内容
- * @param outputFolderId 出力フォルダID
- * @return CSVファイルID
+ * CSVファイル作成する。
+ * @param {string} folderId フォルダID
+ * @param {string} fileName ファイル名
+ * @param {string} contents ファイルの内容
+ * @param {string} outputFolderId 出力フォルダID
+ * @return {string} CSVファイルID
  */
 function createCsvFile(
   folderId: string,
@@ -12,9 +12,9 @@ function createCsvFile(
   contents: string,
   outputFolderId: string,
 ): string {
-  const contentType = "text/csv";
-  const charset = "UTF-8";
-  const folder = DriveApp.getFolderById(folderId);
+  const contentType = "text/csv"; // コンテンツタイプ
+  const charset = "UTF-8"; // 文字コード
+  const folder = DriveApp.getFolderById(folderId); // 出力するフォルダ
 
   const blob = Utilities.newBlob("", contentType, fileName).setDataFromString(
     contents,
@@ -23,7 +23,8 @@ function createCsvFile(
 
   const file = folder.createFile(blob);
 
-  const outputFolder = DriveApp.getFolderById(outputFolderId);
+  // ファイルを移動する
+  const outputFolder = DriveApp.getFolderById(outputFolderId); // 移動先のフォルダ
   file.moveTo(outputFolder);
 
   return file.getId();

@@ -6,9 +6,9 @@ type ConfigKey =
   | "CALENDAR_ID";
 
 /**
- * Script Properties から必須の設定値を取得する。
- * @param key キー
- * @return 値
+ * Script Properties から値を取得する。
+ * @param {string} key キー
+ * @return {string} 値
  */
 function getRequiredConfig(key: ConfigKey): string {
   const value = PropertiesService.getScriptProperties().getProperty(key);

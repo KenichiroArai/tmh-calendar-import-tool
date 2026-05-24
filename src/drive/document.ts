@@ -1,8 +1,8 @@
 /**
  * 入力ファイルIDからドキュメントを作成する。
- * @param inputFileId 入力ファイルID
- * @param outputFolderId 出力フォルダID
- * @return ドキュメントID
+ * @param {string} inputFileId 入力ファイルID
+ * @param {string} outputFolderId 出力フォルダID
+ * @return {string} ドキュメントID
  */
 function createDocument(inputFileId: string, outputFolderId: string): string {
   const drive = Drive as unknown as GoogleAppsScript.Drive_v2;
@@ -24,6 +24,7 @@ function createDocument(inputFileId: string, outputFolderId: string): string {
     throw new Error("OCR 変換後のドキュメント ID を取得できませんでした。");
   }
 
+  // コピー先フォルダにファイルを移動
   DriveApp.getFileById(documentFile.id).moveTo(
     DriveApp.getFolderById(outputFolderId),
   );
@@ -33,8 +34,8 @@ function createDocument(inputFileId: string, outputFolderId: string): string {
 
 /**
  * テキストを取得する。
- * @param documentFileId ドキュメントファイルID
- * @return テキスト
+ * @param {string} documentFileId ドキュメントファイルID
+ * @return {string} テキスト
  */
 function getText(documentFileId: string): string {
   const documentFile = DocumentApp.openById(documentFileId);
@@ -42,10 +43,10 @@ function getText(documentFileId: string): string {
 }
 
 /**
- * 入力フォルダ内の対象ファイルを OCR し、出力フォルダにドキュメントを作成する。
- * @param inputFolderId 入力フォルダID
- * @param outputFolderId 出力フォルダID
- * @return ドキュメントIDの一覧
+ * 入力フォルダIDに該当するファイル一覧の全てのドキュメントを出力フォルダIDのフォルダ内に作成する。
+ * @param {string} inputFolderId 入力フォルダID
+ * @param {string} outputFolderId 出力フォルダID
+ * @return {string[]} ドキュメントIDの一覧
  */
 function createDocuments(
   inputFolderId: string,

@@ -1,7 +1,7 @@
 /**
  * CSVからカレンダーにインポートする。
- * @param csvFileId CSVファイルID
- * @param calendarId カレンダーID
+ * @param {string} csvFileId CSVファイルID
+ * @param {string} calendarId カレンダーID
  */
 function importCSVtoCalendar(csvFileId: string, calendarId: string): void {
   const calendar = CalendarApp.getCalendarById(calendarId);
