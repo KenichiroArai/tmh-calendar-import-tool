@@ -15,17 +15,46 @@ npm install
 
 | パス | 説明 |
 | --- | --- |
-| `src/main.ts` | TypeScript のソース（**編集はここだけ**） |
+| `src/main.ts` | エントリポイント（`myFunction`） |
 | `src/appsscript.json` | GAS マニフェスト（ビルド時に `dist/` へコピー） |
-| `dist/main.js` | `npm run build` で生成される JavaScript |
+| `src/**/*.ts` | 機能別の TypeScript ソース |
+| `dist/**/*.js` | `npm run build` で生成される JavaScript |
 | `dist/appsscript.json` | 上記マニフェストのコピー |
 
 `src/` には TypeScript とマニフェストのみを置きます。**`src/main.js` は不要**です（ビルド成果物は `dist/` に出力されます）。
 
 `clasp` の `rootDir` は **`dist`** です。GAS へ反映する前に必ずビルドしてください。
 
+### ソースのフォルダ構成
+
+GAS では import/export を使わず、ビルド後の各 `.js` が同一グローバルスコープで読み込まれます。
+
 ```
-src/main.ts  ──npm run build──▶  dist/main.js
+src/
+├── main.ts                 # エントリ（メニュー・トリガーから呼ぶ myFunction）
+├── constants.ts            # 定数（ログシート名など）
+├── config/
+│   └── scriptProperties.ts # Script Properties の取得
+├── logging/
+│   └── writeLog.ts         # ログシートへの書き込み
+├── ui/
+│   └── confirmation.ts     # 確認ダイアログ
+├── import/
+│   └── schedule.ts         # インポート処理のオーケストレーション
+├── drive/
+│   ├── targets.ts          # インポート対象ファイルの列挙
+│   ├── files.ts            # ファイル削除・移動
+│   ├── document.ts         # OCR・Google ドキュメント作成
+│   └── csv.ts              # CSV ファイル作成
+├── calendar/
+│   ├── parser.ts           # OCR テキスト → CSV 形式への変換
+│   └── import.ts           # CSV → Google カレンダー
+└── utils/
+    └── url.ts              # URL からファイル ID を抽出（デバッグ用）
+```
+
+```
+src/**/*.ts  ──npm run build──▶  dist/**/*.js
 src/appsscript.json  ──────────▶  dist/appsscript.json
                                       │
                                       └── clasp push ──▶ GAS
@@ -58,7 +87,7 @@ Script ID は GAS エディタ URL の `/d/` と `/edit` の間の文字列で�
 npm run clasp:pull
 ```
 
-`rootDir` が `dist` の場合、取得したファイルは `dist/` に入ります。以降の開発では **`src/main.ts` を編集**し、`npm run build` で `dist/` を再生成してから push してください。
+`rootDir` が `dist` の場合、取得したファイルは `dist/` に入ります。以降の開発では **`src/` 配下の TypeScript を編集**し、`npm run build` で `dist/` を再生成してから push してください。
 
 5. GAS エディタで Script Properties を設定
 
@@ -121,5 +150,5 @@ npm run clasp:logout
 
 - `.clasp.json` は `scriptId` を含むため `.gitignore` で除外しています。
 - `dist/` はビルド生成物のため Git 管理対象外です。手で編集しないでください。
-- `src/main.js` や `src/main.gs` ができた場合は、TypeScript 運用では不要です。削除して `src/main.ts` から `npm run build` してください。
+- `src/main.js` や `src/main.gs` ができた場合は、TypeScript 運用では不要です。削除して `src/` から `npm run build` してください。
 - 同期除外は `.claspignore` で制御しています（`rootDir` が `dist` のときは `dist/` 配下が対象です）。

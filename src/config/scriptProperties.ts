@@ -1,0 +1,22 @@
+/** Script Properties で必須となるキー */
+type ConfigKey =
+  | "IMPORT_TARGET_FOLDER_ID"
+  | "IMPORT_COMPLETED_FOLDER_ID"
+  | "INTERMEDIATE_FILE_GENERATION_FOLDER_ID"
+  | "CALENDAR_ID";
+
+/**
+ * Script Properties から必須の設定値を取得する。
+ * @param key キー
+ * @return 値
+ */
+function getRequiredConfig(key: ConfigKey): string {
+  const value = PropertiesService.getScriptProperties().getProperty(key);
+  if (!value) {
+    throw new Error(
+      "Script Properties の設定値が未定義です。GASエディタで設定してください: " +
+        key,
+    );
+  }
+  return value;
+}
