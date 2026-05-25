@@ -10,9 +10,9 @@ function importCSVtoCalendar(csvFileId: string, calendarId: string): void {
   }
 
   const file = DriveApp.getFileById(csvFileId);
-  const csvDatas = Utilities.parseCsv(file.getBlob().getDataAsString());
+  const csvData = Utilities.parseCsv(file.getBlob().getDataAsString());
 
-  for (const line of csvDatas) {
+  for (const line of csvData) {
     const title = line[2];
     const year = new Date().getFullYear(); // TODO KenichiroArai 2024/12/30 今日より前であれば+1する
     const date = new Date(year + "/" + line[0]);
