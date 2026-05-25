@@ -4,7 +4,7 @@
  * @return {string} 書き込み中身
  */
 function getWriteContents(matchResult: RegExpMatchArray): string {
-  let result = "";
+  let result: string = "";
 
   const PATTERN_SQUARE = /■/;
   const PATTERN_DATA2 = /(.+)■(\d+\/\d+)\(.\)(\d+:\d+).?(.*)/;
@@ -67,6 +67,8 @@ function createCalendarImportFile(
   contents: string,
   outputFolderId: string,
 ): string {
+  let result: string = "";
+
   const PATTERN_DATA = /.(\d+\/\d+)\(.\)(\d+:\d+).?(.*)/;
   const PATTERN_HEAD_SQUARE = /^■/;
 
@@ -121,5 +123,6 @@ function createCalendarImportFile(
 
   writeContents = writeContents.substring(1, writeContents.length);
 
-  return createCsvFile(folderId, fileName, writeContents, outputFolderId);
+  result = createCsvFile(folderId, fileName, writeContents, outputFolderId);
+  return result;
 }

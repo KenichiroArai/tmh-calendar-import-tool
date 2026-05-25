@@ -12,6 +12,8 @@ function createCsvFile(
   contents: string,
   outputFolderId: string,
 ): string {
+  let result: string = "";
+
   const contentType = "text/csv"; // コンテンツタイプ
   const charset = "UTF-8"; // 文字コード
   const folder = DriveApp.getFolderById(folderId); // 出力するフォルダ
@@ -27,5 +29,6 @@ function createCsvFile(
   const outputFolder = DriveApp.getFolderById(outputFolderId); // 移動先のフォルダ
   file.moveTo(outputFolder);
 
-  return file.getId();
+  result = file.getId();
+  return result;
 }

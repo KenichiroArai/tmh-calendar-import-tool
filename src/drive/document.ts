@@ -5,6 +5,8 @@
  * @return {string} ドキュメントID
  */
 function createDocument(inputFileId: string, outputFolderId: string): string {
+  let result: string = "";
+
   const drive = Drive as unknown as GoogleAppsScript.Drive_v2;
   if (!drive) {
     throw new Error(
@@ -29,7 +31,8 @@ function createDocument(inputFileId: string, outputFolderId: string): string {
     DriveApp.getFolderById(outputFolderId),
   );
 
-  return documentFile.id;
+  result = documentFile.id;
+  return result;
 }
 
 /**
@@ -38,8 +41,10 @@ function createDocument(inputFileId: string, outputFolderId: string): string {
  * @return {string} テキスト
  */
 function getText(documentFileId: string): string {
-  const documentFile = DocumentApp.openById(documentFileId);
-  return documentFile.getBody().getText();
+  let result: string = "";
+
+  result = DocumentApp.openById(documentFileId).getBody().getText();
+  return result;
 }
 
 /**

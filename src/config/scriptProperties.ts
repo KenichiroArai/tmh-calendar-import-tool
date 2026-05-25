@@ -11,12 +11,12 @@ type ConfigKey =
  * @return {string} 値
  */
 function getRequiredConfig(key: ConfigKey): string {
-  const value = PropertiesService.getScriptProperties().getProperty(key);
-  if (!value) {
+  const result: string = PropertiesService.getScriptProperties().getProperty(key) ?? "";
+  if (!result) {
     throw new Error(
       "Script Properties の設定値が未定義です。GASエディタで設定してください: " +
         key,
     );
   }
-  return value;
+  return result;
 }
