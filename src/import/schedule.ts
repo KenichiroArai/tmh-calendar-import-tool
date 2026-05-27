@@ -1,7 +1,17 @@
+import { LOG_SHEET_NAME } from "../constants";
+import { getRequiredConfig } from "../config/scriptProperties";
+import { writeLog } from "../logging/writeLog";
+import { createDocuments, getText } from "../drive/document";
+import { getTagetFileIds } from "../drive/targets";
+import { deleteFileByName, moveFileToFolder } from "../drive/files";
+import { createCalendarImportFile } from "../calendar/parser";
+import { importCSVtoCalendar } from "../calendar/import";
+import { extractIdFromUrl } from "../utils/url";
+
 /**
  * スケジュールをインポートする。
  */
-function importSchedule(): void {
+export function importSchedule(): void {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const logSheet = ss.getSheetByName(LOG_SHEET_NAME);
   if (!logSheet) {

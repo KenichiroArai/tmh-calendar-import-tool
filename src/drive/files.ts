@@ -3,7 +3,7 @@
  * @param {string} fileId ファイルID
  * @param {string} excludedFileId 対象外ファイルID
  */
-function deleteFileById(fileId: string, excludedFileId: string): void {
+export function deleteFileById(fileId: string, excludedFileId: string): void {
   // ファイルIDからファイルを取得
   const file = DriveApp.getFileById(fileId);
 
@@ -32,7 +32,7 @@ function deleteFileById(fileId: string, excludedFileId: string): void {
  * ファイル名からファイルを削除する。
  * @param {string} fileName ファイル名
  */
-function deleteFileByName(fileName: string): void {
+export function deleteFileByName(fileName: string): void {
   const files = DriveApp.getFilesByName(fileName);
   while (files.hasNext()) {
     const file = files.next();
@@ -45,7 +45,7 @@ function deleteFileByName(fileName: string): void {
  * @param {string} fileId ファイルID
  * @param {string} folderId フォルダID
  */
-function moveFileToFolder(fileId: string, folderId: string): void {
+export function moveFileToFolder(fileId: string, folderId: string): void {
   const file = DriveApp.getFileById(fileId);
   const folder = DriveApp.getFolderById(folderId);
   file.moveTo(folder);

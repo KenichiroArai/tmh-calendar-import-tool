@@ -1,5 +1,5 @@
 /** Script Properties で必須となるキー */
-type ConfigKey =
+export type ConfigKey =
   | "IMPORT_TARGET_FOLDER_ID"
   | "IMPORT_COMPLETED_FOLDER_ID"
   | "INTERMEDIATE_FILE_GENERATION_FOLDER_ID"
@@ -10,7 +10,7 @@ type ConfigKey =
  * @param {string} key キー
  * @return {string} 値
  */
-function getRequiredConfig(key: ConfigKey): string {
+export function getRequiredConfig(key: ConfigKey): string {
   const result: string = PropertiesService.getScriptProperties().getProperty(key) ?? "";
   if (!result) {
     throw new Error(

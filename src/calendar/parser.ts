@@ -1,9 +1,11 @@
+import { createCsvFile } from "../drive/csv";
+
 /**
  * 書き込み中身を返す。
  * @param {string} matchResult マッチ結果
  * @return {string} 書き込み中身
  */
-function getWriteContents(matchResult: RegExpMatchArray): string {
+export function getWriteContents(matchResult: RegExpMatchArray): string {
   let result: string = "";
 
   const PATTERN_SQUARE = /■/;
@@ -61,7 +63,7 @@ function getWriteContents(matchResult: RegExpMatchArray): string {
  * @param {string} outputFolderId 出力フォルダID
  * @return {string} インポートファイルID
  */
-function createCalendarImportFile(
+export function createCalendarImportFile(
   folderId: string,
   fileName: string,
   contents: string,

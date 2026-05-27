@@ -3,7 +3,7 @@
  * @param {string} folderId フォルダID
  * @return {string[]} イメージファイルID
  */
-function getTagetFileIds(folderId: string): string[] {
+export function getTagetFileIds(folderId: string): string[] {
   const result: string[] = [];
 
   const folder = DriveApp.getFolderById(folderId);

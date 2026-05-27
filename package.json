@@ -2,11 +2,14 @@
   "name": "tmh-calendar-import-tool",
   "version": "0.1.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && node scripts/copy-appsscript-json.mjs",
+    "build": "tsc && node scripts/prepare-gas-output.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "clasp": "clasp",
     "clasp:login": "clasp login",
     "clasp:logout": "clasp logout",
@@ -27,8 +30,12 @@
   },
   "homepage": "https://github.com/KenichiroArai/tmh-calendar-import-tool#readme",
   "devDependencies": {
+    "@gas-plugin/unplugin": "^0.1.2",
     "@google/clasp": "^3.3.0",
     "@types/google-apps-script": "^2.0.8",
-    "typescript": "^5.9.3"
+    "@vitest/coverage-v8": "^4.1.7",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.14",
+    "vitest": "^4.1.7"
   }
 }

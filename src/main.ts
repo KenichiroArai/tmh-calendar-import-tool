@@ -1,6 +1,8 @@
+import { showConfirmationDialog } from "./ui/confirmation";
+
 /**
  * メイン関数。確認ダイアログを表示する。
  */
-function myFunction(): void {
+export function myFunction(): void {
   showConfirmationDialog();
 }

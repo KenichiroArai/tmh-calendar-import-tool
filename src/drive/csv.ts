@@ -6,7 +6,7 @@
  * @param {string} outputFolderId 出力フォルダID
  * @return {string} CSVファイルID
  */
-function createCsvFile(
+export function createCsvFile(
   folderId: string,
   fileName: string,
   contents: string,

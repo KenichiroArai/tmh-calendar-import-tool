@@ -1,8 +1,10 @@
+import { LOG_SHEET_NAME, MAX_CELL_LENGTH } from "../constants";
+
 /**
  * 指定されたメッセージをログシートに書き込む。
  * @param message ログメッセージ
  */
-function writeLog(message: string): void {
+export function writeLog(message: string): void {
   console.log(message);
 
   const logSheet =

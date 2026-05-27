@@ -1,7 +1,7 @@
 /**
  * URLからIDを返す。
  */
-function extractIdFromUrl(url: string): string {
+export function extractIdFromUrl(url: string): string {
   let result: string = "";
 
   const idMatch = url.match(/\/d\/(.+?)\//);

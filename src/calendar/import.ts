@@ -1,9 +1,11 @@
+import { writeLog } from "../logging/writeLog";
+
 /**
  * CSVからカレンダーにインポートする。
  * @param {string} csvFileId CSVファイルID
  * @param {string} calendarId カレンダーID
  */
-function importCSVtoCalendar(csvFileId: string, calendarId: string): void {
+export function importCSVtoCalendar(csvFileId: string, calendarId: string): void {
   const calendar = CalendarApp.getCalendarById(calendarId);
   if (!calendar) {
     throw new Error("カレンダーが見つかりません: " + calendarId);

@@ -1,10 +1,14 @@
+import { getTagetFileIds } from "./targets";
+import { deleteFileById } from "./files";
+import { writeLog } from "../logging/writeLog";
+
 /**
  * 入力ファイルIDからドキュメントを作成する。
  * @param {string} inputFileId 入力ファイルID
  * @param {string} outputFolderId 出力フォルダID
  * @return {string} ドキュメントID
  */
-function createDocument(inputFileId: string, outputFolderId: string): string {
+export function createDocument(inputFileId: string, outputFolderId: string): string {
   let result: string = "";
 
   const drive = Drive as unknown as GoogleAppsScript.Drive_v2;
@@ -40,7 +44,7 @@ function createDocument(inputFileId: string, outputFolderId: string): string {
  * @param {string} documentFileId ドキュメントファイルID
  * @return {string} テキスト
  */
-function getText(documentFileId: string): string {
+export function getText(documentFileId: string): string {
   let result: string = "";
 
   result = DocumentApp.openById(documentFileId).getBody().getText();
@@ -53,7 +57,7 @@ function getText(documentFileId: string): string {
  * @param {string} outputFolderId 出力フォルダID
  * @return {string[]} ドキュメントIDの一覧
  */
-function createDocuments(
+export function createDocuments(
   inputFolderId: string,
   outputFolderId: string,
 ): string[] {

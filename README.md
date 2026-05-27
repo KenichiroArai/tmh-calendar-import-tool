@@ -1,10 +1,10 @@
 # tmh-calendar-import-tool
 
-`clasp` と TypeScript を使って Google Apps Script (GAS) をローカルで管理するための手順です。
+`clasp`、TypeScript、Vite を使って Google Apps Script (GAS) をローカルで管理するための手順です。
 
 ## 前提
 
-- Node.js / npm が利用できること
+- Node.js >= 20 / npm が利用できること
 - このリポジトリの依存関係をインストール済みであること
 
 ```bash
@@ -16,18 +16,27 @@ npm install
 | パス | 説明 |
 | --- | --- |
 | `src/main.ts` | エントリポイント（`myFunction`） |
-| `src/appsscript.json` | GAS マニフェスト（ビルド時に `dist/` へコピー） |
+| `src/appsscript.json` | GAS マニフェスト（ビルド時に `dist/` へ自動コピー） |
 | `src/**/*.ts` | 機能別の TypeScript ソース |
-| `dist/**/*.js` | `npm run build` で生成される JavaScript |
+| `tests/**/*.test.ts` | 単体テスト（Vitest） |
+| `dist/**/*.js` | `npm run build` で生成される GAS 用 JavaScript（分割ファイル） |
 | `dist/appsscript.json` | 上記マニフェストのコピー |
+| `vite.config.ts` | Vitest テスト設定 |
 
-`src/` には TypeScript とマニフェストのみを置きます。**`src/main.js` は不要**です（ビルド成果物は `dist/` に出力されます）。
+`src/` には TypeScript とマニフェストのみを置きます。ビルド成果物は `dist/` に出力されます。
 
 `clasp` の `rootDir` は **`dist`** です。GAS へ反映する前に必ずビルドしてください。
 
-### ソースのフォルダ構成
+### ビルドの仕組み
 
-GAS では import/export を使わず、ビルド後の各 `.js` が同一グローバルスコープで読み込まれます。
+ソースコードは通常の TypeScript モジュールとして `import` / `export` を使って記述します。`npm run build` では `tsc` で `dist/` に分割出力した後、`scripts/prepare-gas-output.mjs` で `import/export` を除去し、GAS 互換のグローバル関数群に変換します。
+
+```
+src/**/*.ts  ──tsc + postprocess──▶  dist/**/*.js  ──clasp push──▶  GAS
+src/appsscript.json  ──────▶  dist/appsscript.json
+```
+
+### ソースのフォルダ構成
 
 ```
 src/
@@ -51,13 +60,6 @@ src/
 │   └── import.ts           # CSV → Google カレンダー
 └── utils/
     └── url.ts              # URL からファイル ID を抽出（デバッグ用）
-```
-
-```
-src/**/*.ts  ──npm run build──▶  dist/**/*.js
-src/appsscript.json  ──────────▶  dist/appsscript.json
-                                      │
-                                      └── clasp push ──▶ GAS
 ```
 
 ## 初期セットアップ
@@ -117,6 +119,26 @@ npm run typecheck
 npm run build
 ```
 
+テスト実行:
+
+```bash
+npm test
+```
+
+テスト（ファイル変更時に自動再実行）:
+
+```bash
+npm run test:watch
+```
+
+テスト + カバレッジレポート:
+
+```bash
+npm run test:coverage
+```
+
+カバレッジレポートは `coverage/` に HTML 形式で生成されます。ブラウザで `coverage/index.html` を開くと行単位のカバレッジを確認できます。
+
 変更確認（ビルド後に `dist/` と GAS を比較）:
 
 ```bash
@@ -146,9 +168,36 @@ npm run clasp:logout
 1. `npm run clasp:push` で最新コードを反映
 2. GAS エディタで関数 `importSchedule` を選択して実行
 
+## テスト
+
+テストフレームワークには [Vitest](https://vitest.dev/) を使用しています。テスト設定は `vite.config.ts` を利用します。
+
+### テストの構成
+
+```
+tests/
+├── setup.ts                  # GAS グローバル API のモック定義
+├── utils/
+│   └── url.test.ts
+├── calendar/
+│   ├── parser.test.ts
+│   └── import.test.ts
+├── config/
+│   └── scriptProperties.test.ts
+└── drive/
+    ├── csv.test.ts
+    ├── document.test.ts
+    ├── files.test.ts
+    └── targets.test.ts
+```
+
+### GAS API のモック
+
+GAS 固有のグローバル API（`SpreadsheetApp`, `DriveApp`, `CalendarApp` 等）は `tests/setup.ts` で `vi.stubGlobal()` を使ってモックしています。個別テストで必要に応じて `vi.mocked()` でオーバーライドできます。
+
 ## 補足
 
 - `.clasp.json` は `scriptId` を含むため `.gitignore` で除外しています。
 - `dist/` はビルド生成物のため Git 管理対象外です。手で編集しないでください。
-- `src/main.js` や `src/main.gs` ができた場合は、TypeScript 運用では不要です。削除して `src/` から `npm run build` してください。
+- `coverage/` はテストカバレッジレポートのため Git 管理対象外です。
 - 同期除外は `.claspignore` で制御しています（`rootDir` が `dist` のときは `dist/` 配下が対象です）。
