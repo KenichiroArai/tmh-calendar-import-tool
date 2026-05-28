@@ -56,6 +56,22 @@ describe("createCalendarImportFile", () => {
     expect(result).toBe("mock-csv-file-id");
   });
 
+  it("■以外で始まりデータパターンに一致する行を CSV 形式に変換する", async () => {
+    const { createCsvFile } = await import("../../src/drive/csv");
+    const mockedCreateCsvFile = vi.mocked(createCsvFile);
+    mockedCreateCsvFile.mockClear();
+
+    createCalendarImportFile(
+      "folder-id",
+      "test.csv",
+      "a1/15(月)10:00 会議",
+      "output-folder-id",
+    );
+
+    const csvContents = mockedCreateCsvFile.mock.calls[0][2];
+    expect(csvContents).toContain("1/15, 10:00, 会議, 会議");
+  });
+
   it("空行やスペースのみの行をスキップする", async () => {
     const { createCsvFile } = await import("../../src/drive/csv");
     const mockedCreateCsvFile = vi.mocked(createCsvFile);
@@ -93,5 +109,38 @@ describe("createCalendarImportFile", () => {
     const csvContents = mockedCreateCsvFile.mock.calls[0][2];
     // substring(1) で先頭1文字が除去されるため "ッダー行" になる
     expect(csvContents).toContain("ッダー行");
+  });
+
+  it("■で始まる行をパースする", async () => {
+    const { createCsvFile } = await import("../../src/drive/csv");
+    const mockedCreateCsvFile = vi.mocked(createCsvFile);
+    mockedCreateCsvFile.mockClear();
+
+    const contents = "■1/15(月)10:00 会議";
+    createCalendarImportFile(
+      "folder-id",
+      "test.csv",
+      contents,
+      "output-folder-id",
+    );
+
+    const csvContents = mockedCreateCsvFile.mock.calls[0][2];
+    expect(csvContents).toContain("1/15, 10:00, 会議, 会議");
+  });
+
+  it("■で始まるがパターン不一致の行をスキップする", async () => {
+    const { createCsvFile } = await import("../../src/drive/csv");
+    const mockedCreateCsvFile = vi.mocked(createCsvFile);
+    mockedCreateCsvFile.mockClear();
+
+    createCalendarImportFile(
+      "folder-id",
+      "test.csv",
+      "■不正",
+      "output-folder-id",
+    );
+
+    const csvContents = mockedCreateCsvFile.mock.calls[0][2];
+    expect(csvContents).toBe("");
   });
 });

@@ -29,6 +29,12 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       exclude: ["src/appsscript.json"],
       reporter: ["text", "html", "lcov"],
+      thresholds: {
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100,
+      },
     },
   },
 });

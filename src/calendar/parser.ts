@@ -80,13 +80,6 @@ export function createCalendarImportFile(
   /* 内容を行ごとにファイルに書き込む内容に設定する */
   const contentsArrays = contents.split(/\n/);
   for (const line of contentsArrays) {
-    // 行にデータが無いか
-    if (line == null) {
-      // 無い場合
-
-      continue;
-    }
-
     // 行をトリムする
     const line_wk = line.trim();
     // データがあるか

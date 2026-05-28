@@ -6,7 +6,6 @@ import { getTagetFileIds } from "../drive/targets";
 import { deleteFileByName, moveFileToFolder } from "../drive/files";
 import { createCalendarImportFile } from "../calendar/parser";
 import { importCSVtoCalendar } from "../calendar/import";
-import { extractIdFromUrl } from "../utils/url";
 
 /**
  * スケジュールをインポートする。
@@ -148,6 +147,4 @@ export function importSchedule(): void {
       Browser.Buttons.OK,
     );
   }
-
-  void extractIdFromUrl;
 }
