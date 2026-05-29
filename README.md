@@ -40,10 +40,11 @@ src/appsscript.json  ──────▶  dist/appsscript.json
 
 ```
 src/
-├── main.ts                 # エントリ・実行モード切り替え（SCHEDULE_IMPORT_RUN）
-├── constants.ts            # 定数（ログシート名など）
+├── main.ts                 # エントリ（操作パネルから実行オプションを読み取り）
 ├── config/
-│   └── scriptProperties.ts # Script Properties の取得
+│   ├── scriptProperties.ts # Script Properties の取得
+│   └── runOptionsFromSheet.ts # 操作パネル（モード・ドキュメントURL）の読み取り
+├── constants.ts            # 定数（ログシート名・概要文・セル位置など）
 ├── logging/
 │   └── writeLog.ts         # ログシートへの書き込み
 ├── ui/
@@ -173,51 +174,68 @@ npm run clasp:logout
 | 2 | 変換済みドキュメントを CSV 化し Google カレンダーへ登録 | `importConvertedDocumentsToCalendar` |
 | 3 | インポート対象ファイルを完了フォルダへ移動 | `moveImportTargetsToCompleted` |
 
-### 実行モードの切り替え（`main.ts`）
+### 操作パネル（スプレッドシート）
 
-メニュー経由の実行範囲は **`src/main.ts` の `SCHEDULE_IMPORT_RUN` のみ** で切り替えます。作業手順のコメントも同ファイルに記載しています。
+メニュー経由の実行範囲は **スプレッドシートの操作パネル（アクティブシート）** で切り替えます。
+
+| 項目 | 内容 |
+| --- | --- |
+| 概要 | ツールの説明とモード一覧（`constants.ts` の `CONTROL_PANEL_OVERVIEW_TEXT` を貼り付け） |
+| モード | 実行モード（`mode`） |
+| ドキュメントURL | ドキュメント URL / ファイル ID（`manualDocumentUrls`。改行またはカンマ区切りで複数可） |
+
+コード上のセル位置は `constants.ts` の `CONTROL_PANEL_MODE_CELL`（`B2`）、`CONTROL_PANEL_DOCUMENT_URLS_CELL`（`B3`）です。
+
+#### 概要セルに貼り付ける文面
+
+スプレッドシートの「概要」には、セル番号ではなく項目名で案内します。次の定数をそのまま貼り付けてください（`src/constants.ts` の `CONTROL_PANEL_OVERVIEW_TEXT` と同一）。
+
+```text
+本シートは、TMHスケジュールを Google カレンダーへ取り込むための操作パネルです。
+「モード」と「ドキュメントURL」を設定し、「インポートの開始」から実行してください。
+処理の記録は「ログ」シートを確認してください。
+
+【モードに指定する値】
+all … 本番（フェーズ1：ドキュメント作成 → フェーズ2：カレンダー登録 → フェーズ3：完了フォルダへ移動）
+createDocumentsOnly … フェーズ1のみ（ドキュメント作成。ログのファイルIDを確認）
+importOnly … フェーズ2のみ（カレンダー登録。「ドキュメントURL」の指定が必要）
+moveOnly … フェーズ3のみ（インポート対象ファイルを完了フォルダへ移動）
+
+本番ではモードを all、「ドキュメントURL」は空にしてください。
+```
+
+### 実行モードの切り替え
 
 ```
 myFunction (main.ts)
-  └─ SCHEDULE_IMPORT_RUN を渡す
+  └─ readScheduleImportRunFromSheet (config/runOptionsFromSheet.ts)
        └─ showConfirmationDialog (ui/confirmation.ts)
             └─ importSchedule(run) (import/schedule.ts)
 ```
 
 | レイヤ | 役割 |
 | --- | --- |
-| `main.ts` | 運用時のモード指定（`SCHEDULE_IMPORT_RUN`） |
+| 操作パネル | 運用時のモード・ドキュメントURL の指定 |
+| `config/runOptionsFromSheet.ts` | セル値の読み取りとパース |
 | `ui/confirmation.ts` | 確認ダイアログと `importSchedule` への引き渡し |
 | `import/schedule.ts` | フェーズ実行ロジック（`ScheduleImportRunOptions` 型の定義） |
 
-本番では `SCHEDULE_IMPORT_RUN` を次のとおりにしてから `npm run build` → `npm run clasp:push` してください。
+本番では **モードに `all`、ドキュメントURL を空** にしてから「インポートの開始」を実行してください。
 
-```typescript
-export const SCHEDULE_IMPORT_RUN: ScheduleImportRunOptions = {
-  mode: "all",
-  manualDocumentUrls: [],
-};
-```
-
-| 作業 | `mode` | `manualDocumentUrls` |
+| 作業 | モード | ドキュメントURL |
 | --- | --- | --- |
-| 本番（フェーズ1〜3） | `"all"` | `[]` |
-| フェーズ1のみ（ドキュメント作成・ログでファイルID確認） | `"createDocumentsOnly"` | `[]` |
-| フェーズ2のみ（作成済みドキュメントでカレンダー検証） | `"importOnly"` | ドキュメント URL またはファイル ID の配列 |
-| フェーズ3のみ（完了フォルダへ移動） | `"moveOnly"` | `[]` |
+| 本番（フェーズ1〜3） | `all` | （空） |
+| フェーズ1のみ（ドキュメント作成・ログでファイルID確認） | `createDocumentsOnly` | （空） |
+| フェーズ2のみ（作成済みドキュメントでカレンダー検証） | `importOnly` | ドキュメント URL またはファイル ID（複数可） |
+| フェーズ3のみ（完了フォルダへ移動） | `moveOnly` | （空） |
 
-フェーズ2のみの例:
+フェーズ2のみのドキュメントURL の例:
 
-```typescript
-export const SCHEDULE_IMPORT_RUN: ScheduleImportRunOptions = {
-  mode: "importOnly",
-  manualDocumentUrls: [
-    "https://docs.google.com/document/d/xxxxxxxx/edit?usp=sharing",
-  ],
-};
+```text
+https://docs.google.com/document/d/xxxxxxxx/edit?usp=sharing
 ```
 
-URL に `/d/` が含まれる場合は `extractIdFromUrl`（`src/utils/url.ts`）でファイル ID に変換します。ファイル ID を直接指定する場合は ID 文字列をそのまま配列に入れてください。
+URL に `/d/` が含まれる場合は `extractIdFromUrl`（`src/utils/url.ts`）でファイル ID に変換します。ファイル ID を直接指定する場合は ID 文字列をそのまま記載してください。
 
 ### 分割実行（GAS エディタから直接）
 
@@ -233,19 +251,19 @@ URL に `/d/` が含まれる場合は `extractIdFromUrl`（`src/utils/url.ts`�
 importScheduleToCalendar(["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]);
 ```
 
-分割作業の典型的な流れ（いずれも `main.ts` の `SCHEDULE_IMPORT_RUN` を書き換えてメニューから実行）:
+分割作業の典型的な流れ（いずれも操作パネルのモード・ドキュメントURL を編集してメニューから実行）:
 
-1. `mode: "createDocumentsOnly"` で実行し、ログシートの「変換ドキュメント数」「ファイルID」を確認する
-2. `mode: "importOnly"` と `manualDocumentUrls` でカレンダー登録を検証する
-3. 問題なければ `mode: "all"` に戻して本番実行する（フェーズ3の移動も含む）
+1. モードを `createDocumentsOnly` にして実行し、ログシートの「変換ドキュメント数」「ファイルID」を確認する
+2. モードを `importOnly`、ドキュメントURL に対象を指定してカレンダー登録を検証する
+3. 問題なければモードを `all`、ドキュメントURL を空にして本番実行する（フェーズ3の移動も含む）
 
 ## GAS での実行
 
 1. `npm run build` のあと `npm run clasp:push` で最新コードを反映
 2. 本番: スプレッドシートのメニューから実行（`myFunction` → `importSchedule`）
-3. 検証: `main.ts` の `SCHEDULE_IMPORT_RUN` を変更して push 後にメニューから実行。または GAS エディタからフェーズ専用関数を直接実行
+3. 検証: 操作パネルのモード・ドキュメントURL を編集してメニューから実行。または GAS エディタからフェーズ専用関数を直接実行
 
-本番運用前は必ず `main.ts` の `SCHEDULE_IMPORT_RUN.mode` が `"all"` であることを確認してください。
+本番運用前は必ず操作パネルのモードが `all`、ドキュメントURL が空であることを確認してください。
 
 ## テスト
 

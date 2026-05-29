@@ -236,7 +236,7 @@ export function importScheduleMoveTargets(): void {
 
 /**
  * スケジュールをインポートする。
- * メニュー経由の実行範囲は main.ts の SCHEDULE_IMPORT_RUN で指定する。
+ * メニュー経由の実行範囲は操作パネルの「モード」「ドキュメントURL」で指定する。
  */
 export function importSchedule(
   run: ScheduleImportRunOptions = DEFAULT_SCHEDULE_IMPORT_RUN,

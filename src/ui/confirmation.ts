@@ -4,12 +4,25 @@ import {
 } from "../import/schedule";
 
 /**
+ * 確認ダイアログに表示する実行内容の要約。
+ */
+export function formatRunOptionsSummary(
+  run: ScheduleImportRunOptions,
+): string {
+  const documentSummary =
+    run.manualDocumentUrls.length > 0
+      ? `\nドキュメント: ${run.manualDocumentUrls.length}件`
+      : "";
+  return `モード: ${run.mode}${documentSummary}\n\nスケジュールインポートを実行しますか？`;
+}
+
+/**
  * 確認ダイアログを表示し、ユーザーの選択に応じて処理を実行する。
  */
 export function showConfirmationDialog(run: ScheduleImportRunOptions): void {
   const ui = Browser.msgBox(
     "確認",
-    "スケジュールインポートを実行しますか？",
+    formatRunOptionsSummary(run),
     Browser.Buttons.YES_NO,
   );
 

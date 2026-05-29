@@ -1,35 +1,15 @@
-import type { ScheduleImportRunOptions } from "./import/schedule";
+import { readScheduleImportRunFromSheet } from "./config/runOptionsFromSheet";
 import { showConfirmationDialog } from "./ui/confirmation";
 
 /**
- * スケジュールインポートの実行範囲（モード切り替えはこの定数のみを編集する）。
+ * メイン関数。操作パネルの「モード」「ドキュメントURL」を読み取り確認ダイアログを表示する。
  *
- * 作業手順:
- * 1. 本番（フェーズ1〜3を連続実行）
- *    - mode: "all"
- *    - manualDocumentUrls: []
- *
- * 2. フェーズ1のみ（ドキュメント作成してログのファイルIDを確認）
- *    - mode: "createDocumentsOnly"
- *    - manualDocumentUrls: []
- *
- * 3. フェーズ2のみ（作成済みドキュメントでカレンダーインポートを検証）
- *    - mode: "importOnly"
- *    - manualDocumentUrls: ["https://docs.google.com/document/d/.../edit?usp=sharing"]
- *      （ファイルIDを直接指定する場合は ID 文字列をそのまま記載可）
- *
- * 4. フェーズ3のみ（インポート対象を完了フォルダへ移動）
- *    - mode: "moveOnly"
- *    - manualDocumentUrls: []
- */
-export const SCHEDULE_IMPORT_RUN: ScheduleImportRunOptions = {
-  mode: "all",
-  manualDocumentUrls: [],
-};
-
-/**
- * メイン関数。確認ダイアログを表示する。
+ * 作業手順（スプレッドシートの各項目を編集）:
+ * 1. 本番（フェーズ1〜3）: モード=all、ドキュメントURL=空
+ * 2. フェーズ1のみ: モード=createDocumentsOnly、ドキュメントURL=空
+ * 3. フェーズ2のみ: モード=importOnly、ドキュメントURLに URL またはファイル ID
+ * 4. フェーズ3のみ: モード=moveOnly、ドキュメントURL=空
  */
 export function myFunction(): void {
-  showConfirmationDialog(SCHEDULE_IMPORT_RUN);
+  showConfirmationDialog(readScheduleImportRunFromSheet());
 }
