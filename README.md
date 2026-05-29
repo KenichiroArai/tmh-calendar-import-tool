@@ -49,7 +49,7 @@ src/
 ├── ui/
 │   └── confirmation.ts     # 確認ダイアログ
 ├── import/
-│   └── schedule.ts         # インポート処理のオーケストレーション
+│   └── schedule.ts         # インポート処理（3フェーズ + 実行範囲の設定）
 ├── drive/
 │   ├── targets.ts          # インポート対象ファイルの列挙
 │   ├── files.ts            # ファイル削除・移動
@@ -163,10 +163,84 @@ npm run clasp:open
 npm run clasp:logout
 ```
 
+## スケジュールインポートの処理
+
+`src/import/schedule.ts` がインポート全体を制御します。処理は次の3フェーズに分かれています。
+
+| フェーズ | 内容 | 主な関数 |
+| --- | --- | --- |
+| 1 | インポート対象フォルダ内のファイルから Google ドキュメントを作成 | `createConvertedDocuments` |
+| 2 | 変換済みドキュメントを CSV 化し Google カレンダーへ登録 | `importConvertedDocumentsToCalendar` |
+| 3 | インポート対象ファイルを完了フォルダへ移動 | `moveImportTargetsToCompleted` |
+
+### 本番実行（メニュー・確認ダイアログ経由）
+
+スプレッドシートのメニューからは `myFunction` → 確認ダイアログ → `importSchedule` の順で呼ばれます。
+
+本番では `IMPORT_SCHEDULE_RUN_CONFIG` を次のとおりにしてから `npm run clasp:push` してください。
+
+```typescript
+export const IMPORT_SCHEDULE_RUN_CONFIG = {
+  mode: "all",
+  manualDocumentUrls: [],
+};
+```
+
+### 分割実行（検証・デバッグ）
+
+フェーズごとに動かす方法は2通りあります。
+
+**方法A: `IMPORT_SCHEDULE_RUN_CONFIG` を書き換えて `importSchedule` を実行**
+
+`src/import/schedule.ts` の `IMPORT_SCHEDULE_RUN_CONFIG` を編集し、ビルド・push 後に GAS から `importSchedule` を実行します。
+
+| 作業 | `mode` | `manualDocumentUrls` |
+| --- | --- | --- |
+| 本番（フェーズ1〜3） | `"all"` | `[]` |
+| フェーズ1のみ（ドキュメント作成・ログでファイルID確認） | `"createDocumentsOnly"` | `[]` |
+| フェーズ2のみ（作成済みドキュメントでカレンダー検証） | `"importOnly"` | ドキュメント URL またはファイル ID の配列 |
+| フェーズ3のみ（完了フォルダへ移動） | `"moveOnly"` | `[]` |
+
+フェーズ2のみの例:
+
+```typescript
+export const IMPORT_SCHEDULE_RUN_CONFIG = {
+  mode: "importOnly",
+  manualDocumentUrls: [
+    "https://docs.google.com/document/d/xxxxxxxx/edit?usp=sharing",
+  ],
+};
+```
+
+URL に `/d/` が含まれる場合は `extractIdFromUrl`（`src/utils/url.ts`）でファイル ID に変換します。ファイル ID を直接指定する場合は ID 文字列をそのまま配列に入れてください。
+
+**方法B: GAS エディタからフェーズ専用関数を直接実行**
+
+| 関数 | 用途 |
+| --- | --- |
+| `importScheduleCreateDocuments` | フェーズ1のみ |
+| `importScheduleToCalendar` | フェーズ2のみ（引数にファイル ID の配列） |
+| `importScheduleMoveTargets` | フェーズ3のみ |
+
+フェーズ2の実行例（スクリプトエディタ）:
+
+```javascript
+importScheduleToCalendar(["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]);
+```
+
+分割作業の典型的な流れ:
+
+1. `mode: "createDocumentsOnly"` で実行し、ログシートの「変換ドキュメント数」「ファイルID」を確認する
+2. `mode: "importOnly"` と `manualDocumentUrls`（または `importScheduleToCalendar`）でカレンダー登録を検証する
+3. 問題なければ `mode: "all"` に戻して本番実行する（フェーズ3の移動も含む）
+
 ## GAS での実行
 
-1. `npm run clasp:push` で最新コードを反映
-2. GAS エディタで関数 `importSchedule` を選択して実行
+1. `npm run build` のあと `npm run clasp:push` で最新コードを反映
+2. 本番: スプレッドシートのメニューから実行（内部で `importSchedule` が呼ばれる）
+3. 検証: GAS エディタで `importSchedule` または上記のフェーズ専用関数を選択して実行
+
+本番運用前は必ず `IMPORT_SCHEDULE_RUN_CONFIG.mode` が `"all"` であることを確認してください。
 
 ## テスト
 
@@ -177,6 +251,8 @@ npm run clasp:logout
 ```
 tests/
 ├── setup.ts                  # GAS グローバル API のモック定義
+├── import/
+│   └── schedule.test.ts      # インポート全体・フェーズ分割・実行設定
 ├── utils/
 │   └── url.test.ts
 ├── calendar/
@@ -190,6 +266,8 @@ tests/
     ├── files.test.ts
     └── targets.test.ts
 ```
+
+`tests/import/schedule.test.ts` では `IMPORT_SCHEDULE_RUN_CONFIG` の各 `mode`（`all` / `createDocumentsOnly` / `importOnly` / `moveOnly`）と、フェーズ専用関数（`importScheduleCreateDocuments` など）の振る舞いを検証しています。
 
 ### GAS API のモック
 
