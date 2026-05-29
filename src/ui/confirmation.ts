@@ -1,9 +1,12 @@
-import { importSchedule } from "../import/schedule";
+import {
+  importSchedule,
+  type ScheduleImportRunOptions,
+} from "../import/schedule";
 
 /**
  * 確認ダイアログを表示し、ユーザーの選択に応じて処理を実行する。
  */
-export function showConfirmationDialog(): void {
+export function showConfirmationDialog(run: ScheduleImportRunOptions): void {
   const ui = Browser.msgBox(
     "確認",
     "スケジュールインポートを実行しますか？",
@@ -11,7 +14,7 @@ export function showConfirmationDialog(): void {
   );
 
   if (ui === "yes") {
-    importSchedule();
+    importSchedule(run);
   } else {
     Logger.log("操作はキャンセルされました。");
   }

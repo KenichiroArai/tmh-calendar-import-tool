@@ -40,7 +40,7 @@ src/appsscript.json  ──────▶  dist/appsscript.json
 
 ```
 src/
-├── main.ts                 # エントリ（メニュー・トリガーから呼ぶ myFunction）
+├── main.ts                 # エントリ・実行モード切り替え（SCHEDULE_IMPORT_RUN）
 ├── constants.ts            # 定数（ログシート名など）
 ├── config/
 │   └── scriptProperties.ts # Script Properties の取得
@@ -173,26 +173,31 @@ npm run clasp:logout
 | 2 | 変換済みドキュメントを CSV 化し Google カレンダーへ登録 | `importConvertedDocumentsToCalendar` |
 | 3 | インポート対象ファイルを完了フォルダへ移動 | `moveImportTargetsToCompleted` |
 
-### 本番実行（メニュー・確認ダイアログ経由）
+### 実行モードの切り替え（`main.ts`）
 
-スプレッドシートのメニューからは `myFunction` → 確認ダイアログ → `importSchedule` の順で呼ばれます。
+メニュー経由の実行範囲は **`src/main.ts` の `SCHEDULE_IMPORT_RUN` のみ** で切り替えます。作業手順のコメントも同ファイルに記載しています。
 
-本番では `IMPORT_SCHEDULE_RUN_CONFIG` を次のとおりにしてから `npm run clasp:push` してください。
+```
+myFunction (main.ts)
+  └─ SCHEDULE_IMPORT_RUN を渡す
+       └─ showConfirmationDialog (ui/confirmation.ts)
+            └─ importSchedule(run) (import/schedule.ts)
+```
+
+| レイヤ | 役割 |
+| --- | --- |
+| `main.ts` | 運用時のモード指定（`SCHEDULE_IMPORT_RUN`） |
+| `ui/confirmation.ts` | 確認ダイアログと `importSchedule` への引き渡し |
+| `import/schedule.ts` | フェーズ実行ロジック（`ScheduleImportRunOptions` 型の定義） |
+
+本番では `SCHEDULE_IMPORT_RUN` を次のとおりにしてから `npm run build` → `npm run clasp:push` してください。
 
 ```typescript
-export const IMPORT_SCHEDULE_RUN_CONFIG = {
+export const SCHEDULE_IMPORT_RUN: ScheduleImportRunOptions = {
   mode: "all",
   manualDocumentUrls: [],
 };
 ```
-
-### 分割実行（検証・デバッグ）
-
-フェーズごとに動かす方法は2通りあります。
-
-**方法A: `IMPORT_SCHEDULE_RUN_CONFIG` を書き換えて `importSchedule` を実行**
-
-`src/import/schedule.ts` の `IMPORT_SCHEDULE_RUN_CONFIG` を編集し、ビルド・push 後に GAS から `importSchedule` を実行します。
 
 | 作業 | `mode` | `manualDocumentUrls` |
 | --- | --- | --- |
@@ -204,7 +209,7 @@ export const IMPORT_SCHEDULE_RUN_CONFIG = {
 フェーズ2のみの例:
 
 ```typescript
-export const IMPORT_SCHEDULE_RUN_CONFIG = {
+export const SCHEDULE_IMPORT_RUN: ScheduleImportRunOptions = {
   mode: "importOnly",
   manualDocumentUrls: [
     "https://docs.google.com/document/d/xxxxxxxx/edit?usp=sharing",
@@ -214,7 +219,7 @@ export const IMPORT_SCHEDULE_RUN_CONFIG = {
 
 URL に `/d/` が含まれる場合は `extractIdFromUrl`（`src/utils/url.ts`）でファイル ID に変換します。ファイル ID を直接指定する場合は ID 文字列をそのまま配列に入れてください。
 
-**方法B: GAS エディタからフェーズ専用関数を直接実行**
+### 分割実行（GAS エディタから直接）
 
 | 関数 | 用途 |
 | --- | --- |
@@ -228,19 +233,19 @@ URL に `/d/` が含まれる場合は `extractIdFromUrl`（`src/utils/url.ts`�
 importScheduleToCalendar(["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]);
 ```
 
-分割作業の典型的な流れ:
+分割作業の典型的な流れ（いずれも `main.ts` の `SCHEDULE_IMPORT_RUN` を書き換えてメニューから実行）:
 
 1. `mode: "createDocumentsOnly"` で実行し、ログシートの「変換ドキュメント数」「ファイルID」を確認する
-2. `mode: "importOnly"` と `manualDocumentUrls`（または `importScheduleToCalendar`）でカレンダー登録を検証する
+2. `mode: "importOnly"` と `manualDocumentUrls` でカレンダー登録を検証する
 3. 問題なければ `mode: "all"` に戻して本番実行する（フェーズ3の移動も含む）
 
 ## GAS での実行
 
 1. `npm run build` のあと `npm run clasp:push` で最新コードを反映
-2. 本番: スプレッドシートのメニューから実行（内部で `importSchedule` が呼ばれる）
-3. 検証: GAS エディタで `importSchedule` または上記のフェーズ専用関数を選択して実行
+2. 本番: スプレッドシートのメニューから実行（`myFunction` → `importSchedule`）
+3. 検証: `main.ts` の `SCHEDULE_IMPORT_RUN` を変更して push 後にメニューから実行。または GAS エディタからフェーズ専用関数を直接実行
 
-本番運用前は必ず `IMPORT_SCHEDULE_RUN_CONFIG.mode` が `"all"` であることを確認してください。
+本番運用前は必ず `main.ts` の `SCHEDULE_IMPORT_RUN.mode` が `"all"` であることを確認してください。
 
 ## テスト
 
@@ -267,7 +272,7 @@ tests/
     └── targets.test.ts
 ```
 
-`tests/import/schedule.test.ts` では `IMPORT_SCHEDULE_RUN_CONFIG` の各 `mode`（`all` / `createDocumentsOnly` / `importOnly` / `moveOnly`）と、フェーズ専用関数（`importScheduleCreateDocuments` など）の振る舞いを検証しています。
+`tests/import/schedule.test.ts` では `importSchedule` に渡す `ScheduleImportRunOptions` の各 `mode` と、フェーズ専用関数（`importScheduleCreateDocuments` など）の振る舞いを検証しています。
 
 ### GAS API のモック
 

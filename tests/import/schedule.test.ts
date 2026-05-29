@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-  IMPORT_SCHEDULE_RUN_CONFIG,
+  DEFAULT_SCHEDULE_IMPORT_RUN,
   importSchedule,
   importScheduleCreateDocuments,
   importScheduleMoveTargets,
@@ -27,11 +27,6 @@ const DOCUMENT_URL =
   "https://docs.google.com/document/d/1psjqhg0trmUAtcnrC4mcLlFF7YnxugF0FJNix5bAM4Y/edit?usp=sharing";
 const DOCUMENT_ID = "1psjqhg0trmUAtcnrC4mcLlFF7YnxugF0FJNix5bAM4Y";
 
-function resetImportScheduleRunConfig(): void {
-  IMPORT_SCHEDULE_RUN_CONFIG.mode = "all";
-  IMPORT_SCHEDULE_RUN_CONFIG.manualDocumentUrls = [];
-}
-
 function setupSuccessfulCalendarImportMocks(): void {
   vi.mocked(getText).mockReturnValue(" 1/15(月)10:00 会議");
   vi.mocked(DriveApp.getFileById).mockReturnValue({
@@ -45,7 +40,6 @@ describe("importSchedule", () => {
   const mockLogSheet = { clear: mockClear };
 
   beforeEach(() => {
-    resetImportScheduleRunConfig();
     mockClear.mockClear();
     vi.mocked(writeLog).mockReset();
     vi.mocked(getRequiredConfig).mockReset();
@@ -81,7 +75,7 @@ describe("importSchedule", () => {
     it("変換対象がない場合は警告ダイアログを表示する", () => {
       vi.mocked(createDocuments).mockReturnValue([]);
 
-      importSchedule();
+      importSchedule(DEFAULT_SCHEDULE_IMPORT_RUN);
 
       expect(mockClear).toHaveBeenCalled();
       expect(writeLog).toHaveBeenCalledWith(
@@ -99,7 +93,7 @@ describe("importSchedule", () => {
       setupSuccessfulCalendarImportMocks();
       vi.mocked(getTagetFileIds).mockReturnValue(["target-1"]);
 
-      importSchedule();
+      importSchedule(DEFAULT_SCHEDULE_IMPORT_RUN);
 
       expect(deleteFileByName).toHaveBeenCalledWith("scan.csv");
       expect(importCSVtoCalendar).toHaveBeenCalledWith(
@@ -127,7 +121,7 @@ describe("importSchedule", () => {
       } as never);
       vi.mocked(getTagetFileIds).mockReturnValue([]);
 
-      importSchedule();
+      importSchedule(DEFAULT_SCHEDULE_IMPORT_RUN);
 
       expect(writeLog).toHaveBeenCalledWith(
         expect.stringContaining("エラーが発生しました: 変換失敗"),
@@ -144,7 +138,7 @@ describe("importSchedule", () => {
         throw new Error("OCR 失敗");
       });
 
-      importSchedule();
+      importSchedule(DEFAULT_SCHEDULE_IMPORT_RUN);
 
       expect(writeLog).toHaveBeenCalledWith(
         expect.stringContaining("エラーが発生しました: OCR 失敗"),
@@ -161,7 +155,7 @@ describe("importSchedule", () => {
         throw "raw error";
       });
 
-      importSchedule();
+      importSchedule(DEFAULT_SCHEDULE_IMPORT_RUN);
 
       expect(writeLog).toHaveBeenCalledWith(
         expect.stringContaining("エラーが発生しました: raw error"),
@@ -183,7 +177,7 @@ describe("importSchedule", () => {
       } as never);
       vi.mocked(getTagetFileIds).mockReturnValue([]);
 
-      importSchedule();
+      importSchedule(DEFAULT_SCHEDULE_IMPORT_RUN);
 
       expect(writeLog).toHaveBeenCalledWith(
         expect.stringContaining("エラーが発生しました: file raw error"),
@@ -198,10 +192,12 @@ describe("importSchedule", () => {
 
   describe('mode: "createDocumentsOnly"', () => {
     it("ドキュメント作成後にカレンダーインポートと移動を行わない", () => {
-      IMPORT_SCHEDULE_RUN_CONFIG.mode = "createDocumentsOnly";
       vi.mocked(createDocuments).mockReturnValue(["doc-1"]);
 
-      importSchedule();
+      importSchedule({
+        mode: "createDocumentsOnly",
+        manualDocumentUrls: [],
+      });
 
       expect(createDocuments).toHaveBeenCalled();
       expect(importCSVtoCalendar).not.toHaveBeenCalled();
@@ -216,11 +212,12 @@ describe("importSchedule", () => {
 
   describe('mode: "importOnly"', () => {
     it("URL からファイルIDを解決してカレンダーインポートする", () => {
-      IMPORT_SCHEDULE_RUN_CONFIG.mode = "importOnly";
-      IMPORT_SCHEDULE_RUN_CONFIG.manualDocumentUrls = [DOCUMENT_URL];
       setupSuccessfulCalendarImportMocks();
 
-      importSchedule();
+      importSchedule({
+        mode: "importOnly",
+        manualDocumentUrls: [DOCUMENT_URL],
+      });
 
       expect(createDocuments).not.toHaveBeenCalled();
       expect(DriveApp.getFileById).toHaveBeenCalledWith(DOCUMENT_ID);
@@ -232,11 +229,12 @@ describe("importSchedule", () => {
     });
 
     it("ファイルIDを直接指定してカレンダーインポートする", () => {
-      IMPORT_SCHEDULE_RUN_CONFIG.mode = "importOnly";
-      IMPORT_SCHEDULE_RUN_CONFIG.manualDocumentUrls = [DOCUMENT_ID];
       setupSuccessfulCalendarImportMocks();
 
-      importSchedule();
+      importSchedule({
+        mode: "importOnly",
+        manualDocumentUrls: [DOCUMENT_ID],
+      });
 
       expect(createDocuments).not.toHaveBeenCalled();
       expect(DriveApp.getFileById).toHaveBeenCalledWith(DOCUMENT_ID);
@@ -244,10 +242,7 @@ describe("importSchedule", () => {
     });
 
     it("manualDocumentUrls が空の場合は警告ダイアログを表示する", () => {
-      IMPORT_SCHEDULE_RUN_CONFIG.mode = "importOnly";
-      IMPORT_SCHEDULE_RUN_CONFIG.manualDocumentUrls = [];
-
-      importSchedule();
+      importSchedule({ mode: "importOnly", manualDocumentUrls: [] });
 
       expect(createDocuments).not.toHaveBeenCalled();
       expect(importCSVtoCalendar).not.toHaveBeenCalled();
@@ -264,10 +259,9 @@ describe("importSchedule", () => {
 
   describe('mode: "moveOnly"', () => {
     it("インポート対象の移動のみ行う", () => {
-      IMPORT_SCHEDULE_RUN_CONFIG.mode = "moveOnly";
       vi.mocked(getTagetFileIds).mockReturnValue(["target-1"]);
 
-      importSchedule();
+      importSchedule({ mode: "moveOnly", manualDocumentUrls: [] });
 
       expect(createDocuments).not.toHaveBeenCalled();
       expect(importCSVtoCalendar).not.toHaveBeenCalled();
@@ -289,7 +283,6 @@ describe("importScheduleCreateDocuments", () => {
   const mockLogSheet = { clear: mockClear };
 
   beforeEach(() => {
-    resetImportScheduleRunConfig();
     mockClear.mockClear();
     vi.mocked(writeLog).mockReset();
     vi.mocked(getRequiredConfig).mockReset();
@@ -322,7 +315,6 @@ describe("importScheduleToCalendar", () => {
   const mockLogSheet = { clear: mockClear };
 
   beforeEach(() => {
-    resetImportScheduleRunConfig();
     mockClear.mockClear();
     vi.mocked(writeLog).mockReset();
     vi.mocked(getRequiredConfig).mockReset();
@@ -355,7 +347,7 @@ describe("importScheduleToCalendar", () => {
 
     expect(importCSVtoCalendar).not.toHaveBeenCalled();
     expect(writeLog).toHaveBeenCalledWith(
-      "インポート対象のドキュメントIDが指定されていません。",
+      "importOnly では manualDocumentUrls にドキュメント URL またはファイルIDを指定してください。",
     );
     expect(Browser.msgBox).toHaveBeenCalledWith(
       "警告",
@@ -370,7 +362,6 @@ describe("importScheduleMoveTargets", () => {
   const mockLogSheet = { clear: mockClear };
 
   beforeEach(() => {
-    resetImportScheduleRunConfig();
     mockClear.mockClear();
     vi.mocked(getRequiredConfig).mockReset();
     vi.mocked(createDocuments).mockReset();

@@ -8,6 +8,22 @@ import { createCalendarImportFile } from "../calendar/parser";
 import { importCSVtoCalendar } from "../calendar/import";
 import { extractIdFromUrl } from "../utils/url";
 
+export type ScheduleImportMode =
+  | "all"
+  | "createDocumentsOnly"
+  | "importOnly"
+  | "moveOnly";
+
+export interface ScheduleImportRunOptions {
+  mode: ScheduleImportMode;
+  manualDocumentUrls: string[];
+}
+
+export const DEFAULT_SCHEDULE_IMPORT_RUN: ScheduleImportRunOptions = {
+  mode: "all",
+  manualDocumentUrls: [],
+};
+
 interface ScheduleImportContext {
   importTargetFolderId: string;
   importCompletedFolderId: string;
@@ -192,75 +208,40 @@ function moveImportTargetsToCompleted(
 }
 
 /**
- * フェーズ1のみ: ドキュメント作成まで実行する。
+ * フェーズ1のみ: ドキュメント作成まで実行する（GAS エディタからの直接実行用）。
  */
 export function importScheduleCreateDocuments(): void {
-  runScheduleImportPhase((ctx, state) => {
-    createConvertedDocuments(ctx, state);
+  importSchedule({
+    mode: "createDocumentsOnly",
+    manualDocumentUrls: [],
   });
 }
 
 /**
- * フェーズ2のみ: 指定した変換済みドキュメントIDをカレンダーへインポートする。
- * デバッグ時は Script Editor から ID を渡して実行する。
+ * フェーズ2のみ: 指定した変換済みドキュメントIDをカレンダーへインポートする（GAS エディタからの直接実行用）。
  */
 export function importScheduleToCalendar(convertedFileIds: string[]): void {
-  runScheduleImportPhase((ctx, state) => {
-    if (convertedFileIds.length <= 0) {
-      writeLog("インポート対象のドキュメントIDが指定されていません。");
-      state.hasWarning = true;
-      return;
-    }
-    importConvertedDocumentsToCalendar(ctx, state, convertedFileIds);
+  importSchedule({
+    mode: "importOnly",
+    manualDocumentUrls: convertedFileIds,
   });
 }
 
 /**
- * フェーズ3のみ: インポート対象ファイルを完了フォルダへ移動する。
+ * フェーズ3のみ: インポート対象ファイルを完了フォルダへ移動する（GAS エディタからの直接実行用）。
  */
 export function importScheduleMoveTargets(): void {
-  runScheduleImportPhase((ctx) => {
-    moveImportTargetsToCompleted(ctx);
-  });
+  importSchedule({ mode: "moveOnly", manualDocumentUrls: [] });
 }
-
-/**
- * importSchedule の実行範囲。
- * メニューから実行する前に、作業内容に合わせて mode と manualDocumentUrls を書き換える。
- *
- * 作業手順:
- * 1. 本番（フェーズ1〜3を連続実行）
- *    - mode: "all"
- *    - manualDocumentUrls: []
- *
- * 2. フェーズ1のみ（ドキュメント作成してログのファイルIDを確認）
- *    - mode: "createDocumentsOnly"
- *    - manualDocumentUrls: []
- *
- * 3. フェーズ2のみ（作成済みドキュメントでカレンダーインポートを検証）
- *    - mode: "importOnly"
- *    - manualDocumentUrls: ["https://docs.google.com/document/d/.../edit?usp=sharing"]
- *      （ファイルIDを直接指定する場合は ID 文字列をそのまま記載可）
- *
- * 4. フェーズ3のみ（インポート対象を完了フォルダへ移動）
- *    - mode: "moveOnly"
- *    - manualDocumentUrls: []
- */
-export const IMPORT_SCHEDULE_RUN_CONFIG = {
-  mode: "all" as
-    | "all"
-    | "createDocumentsOnly"
-    | "importOnly"
-    | "moveOnly",
-  manualDocumentUrls: [] as string[],
-};
 
 /**
  * スケジュールをインポートする。
- * 実行範囲は IMPORT_SCHEDULE_RUN_CONFIG で指定する。
+ * メニュー経由の実行範囲は main.ts の SCHEDULE_IMPORT_RUN で指定する。
  */
-export function importSchedule(): void {
-  const { mode, manualDocumentUrls } = IMPORT_SCHEDULE_RUN_CONFIG;
+export function importSchedule(
+  run: ScheduleImportRunOptions = DEFAULT_SCHEDULE_IMPORT_RUN,
+): void {
+  const { mode, manualDocumentUrls } = run;
 
   runScheduleImportPhase((ctx, state) => {
     if (mode === "moveOnly") {
