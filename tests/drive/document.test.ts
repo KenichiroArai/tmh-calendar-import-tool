@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createDocument, getText, createDocuments } from "../../src/drive/document";
+import {
+  createDocument,
+  getText,
+  normalizeDocumentText,
+  createDocuments,
+} from "../../src/drive/document";
 import { getTagetFileIds } from "../../src/drive/targets";
 import { deleteFileById } from "../../src/drive/files";
 
@@ -65,6 +70,12 @@ describe("getText", () => {
 
     const result = getText("doc-id");
     expect(result).toBe("抽出されたテキスト");
+  });
+});
+
+describe("normalizeDocumentText", () => {
+  it("OCR ドキュメントのテキストをパーサー用に正規化する", () => {
+    normalizeDocumentText("");
   });
 });
 
