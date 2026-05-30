@@ -55,6 +55,7 @@ src/
 │   ├── targets.ts          # インポート対象ファイルの列挙
 │   ├── files.ts            # ファイル削除・移動
 │   ├── document.ts         # OCR・Google ドキュメント作成
+│   ├── normalizeDocumentText.ts  # OCR テキストの正規化
 │   └── csv.ts              # CSV ファイル作成
 ├── calendar/
 │   ├── parser.ts           # OCR テキスト → CSV 形式への変換

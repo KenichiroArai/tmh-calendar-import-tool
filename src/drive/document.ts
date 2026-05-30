@@ -1,6 +1,7 @@
 import { getTagetFileIds } from "./targets";
 import { deleteFileById } from "./files";
 import { writeLog } from "../logging/writeLog";
+import { normalizeDocumentText } from "./normalizeDocumentText";
 
 /**
  * 入力ファイルIDからドキュメントを作成する。
@@ -49,18 +50,6 @@ export function getText(documentFileId: string): string {
 
   result = DocumentApp.openById(documentFileId).getBody().getText();
   result = normalizeDocumentText(result);
-  return result;
-}
-
-/**
- * getText で取得したテキストを、後続のカレンダーパーサー用正規表現に合う形式へ変換する。
- * @param {string} text getText の戻り値
- * @return {string} 正規化後のテキスト
- */
-export function normalizeDocumentText(text: string): string {
-  let result: string = "";
-
-  result = text;
   return result;
 }
 
