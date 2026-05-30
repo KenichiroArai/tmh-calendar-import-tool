@@ -1,0 +1,86 @@
+---
+description: 関数は result 先頭宣言・return result 終端、if はガード節で浅く
+globs: src/**/*.ts
+alwaysApply: true
+---
+
+# TypeScript 関数スタイル
+
+Agent（Auto）で `src/**/*.ts` を編集・追加するときは、既存コード（`normalizeDocumentText.ts`, `document.ts`, `parser.ts`, `url.ts` など）に合わせる。
+
+## result の宣言と return
+
+- 戻り値を持つ関数では、先頭で `let result`（または `const result`）を宣言する。
+- 関数の最後は `return result;` で終える（早期 return する分岐を除く）。
+- 空文字・空配列など、型に合う初期値を付ける。
+
+```typescript
+// ✅ このプロジェクトの慣例
+export function normalizeDocumentText(text: string): string {
+  let result: string = "";
+
+  if (text === "") {
+    return result;
+  }
+
+  // ... メイン処理 ...
+  result = entries.map(...).join("\n");
+
+  return result;
+}
+```
+
+```typescript
+// ❌ 避ける: result を使わず直接 return
+export function getText(id: string): string {
+  return normalizeDocumentText(DocumentApp.openById(id).getBody().getText());
+}
+```
+
+## if のネストを浅くする（ガード節）
+
+- `if` のブロック内にメイン処理しかない場合は、条件を反転して早期に `return` / `continue` / `throw` し、メイン処理は外側（同じスコープ）に書く。
+- ネストが 2 段以上になる場合は、ガード節への分割を優先する。
+
+```typescript
+// ✅ ガード節 + 外側でメイン処理（normalizeDocumentText.ts と同型）
+export function normalizeDocumentText(text: string): string {
+  let result: string = "";
+
+  if (text === "") {
+    return result;
+  }
+
+  const entries = collectEntries(normalized.split("\n"));
+  result = entries.map(...).join("\n");
+  return result;
+}
+```
+
+```typescript
+// ❌ 避ける: if だけで全体を包む
+export function normalizeDocumentText(text: string): string {
+  let result: string = "";
+  if (text !== "") {
+    const entries = collectEntries(...);
+    result = entries.map(...).join("\n");
+  }
+  return result;
+}
+```
+
+```typescript
+// ✅ ネスト回避（parser.ts の早期 return）
+if (!matchResult2) {
+  return result;
+}
+// ここからメイン処理
+result += "...";
+```
+
+- ループ内の空行スキップなどは `continue` で早期に抜ける（`collectEntries` の `if (line.trim() === "") { continue; }` を参照）。
+
+## 例外
+
+- `void` 関数や副作用のみの処理は `result` パターン不要。
+- ループで `result.push(...)` だけ行う場合は `const result: T[] = []` でもよい（`createDocuments` を参照）。
