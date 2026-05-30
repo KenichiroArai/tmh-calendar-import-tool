@@ -19,6 +19,7 @@ npm install
 | `src/appsscript.json` | GAS マニフェスト（ビルド時に `dist/` へ自動コピー） |
 | `src/**/*.ts` | 機能別の TypeScript ソース |
 | `tests/**/*.test.ts` | 単体テスト（Vitest） |
+| `tests/fixtures/` | フィクスチャ駆動テスト用データ（`tests/fixtures/README.md` 参照） |
 | `dist/**/*.js` | `npm run build` で生成される GAS 用 JavaScript（分割ファイル） |
 | `dist/appsscript.json` | 上記マニフェストのコピー |
 | `vite.config.ts` | Vitest テスト設定 |
@@ -55,7 +56,16 @@ src/
 │   ├── targets.ts          # インポート対象ファイルの列挙
 │   ├── files.ts            # ファイル削除・移動
 │   ├── document.ts         # OCR・Google ドキュメント作成
-│   ├── normalizeDocumentText.ts  # OCR テキストの正規化
+│   ├── normalizeDocumentText/  # OCR テキストの正規化（パイプライン）
+│   │   ├── index.ts            # 公開 API（`normalizeDocumentText`）
+│   │   ├── pipeline.ts         # 処理順序の定義
+│   │   ├── normalizeInputNewlines.ts
+│   │   ├── collectEntries.ts
+│   │   ├── splitInlineSquareEntries.ts
+│   │   ├── normalizeEntriesContent.ts
+│   │   ├── normalizeEntryContent.ts  # ■ 行の内容変換（追加はここ）
+│   │   ├── normalizeSquareEntry.ts
+│   │   └── formatNormalizedOutput.ts
 │   └── csv.ts              # CSV ファイル作成
 ├── calendar/
 │   ├── parser.ts           # OCR テキスト → CSV 形式への変換
@@ -63,6 +73,19 @@ src/
 └── utils/
     └── url.ts              # URL からファイル ID を抽出（デバッグ用）
 ```
+
+### OCR テキスト正規化（`normalizeDocumentText`）
+
+`document.ts` の `getText` は、Google ドキュメントから取得した OCR テキストを `normalizeDocumentText` で正規化してから後続のパーサーへ渡します。処理は `pipeline.ts` で次の4段階に分かれています。
+
+| 段階 | モジュール | 内容 |
+| --- | --- | --- |
+| 1 | `normalizeInputNewlines.ts` | 改行を LF に統一 |
+| 2 | `collectEntries.ts` / `splitInlineSquareEntries.ts` | ■ 行への続き行結合、同一行内の複数 ■ 分割 |
+| 3 | `normalizeEntriesContent.ts` / `normalizeEntryContent.ts` | ■ 行の内容正規化（現状は OCR スペース削除） |
+| 4 | `formatNormalizedOutput.ts` | 行結合と末尾改行の復元 |
+
+■ 行向けの新しい変換を足すときは、`normalizeEntryContent.ts` に処理を追加してください。構造（行結合・分割）を変える場合は `collectEntries.ts`、出力形式を変える場合は `formatNormalizedOutput.ts` を編集します。
 
 ## 初期セットアップ
 
@@ -139,7 +162,19 @@ npm run test:watch
 npm run test:coverage
 ```
 
-カバレッジレポートは `coverage/` に HTML 形式で生成されます。ブラウザで `coverage/index.html` を開くと行単位のカバレッジを確認できます。
+カバレッジレポートは `coverage/` に HTML 形式で生成されます。ブラウザで `coverage/index.html` を開くと行単位のカバレッジを確認できます。`src/**/*.ts` に対する statements / branches / functions / lines はいずれも 100% を閾値としています（`vite.config.ts`）。
+
+テキストフィクスチャの雛形作成:
+
+```bash
+npm run test:fixture -- <suiteName> <patternId>
+```
+
+例:
+
+```bash
+npm run test:fixture -- normalizeDocumentText 08_my_pattern
+```
 
 変更確認（ビルド後に `dist/` と GAS を比較）:
 
@@ -275,6 +310,11 @@ importScheduleToCalendar(["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]);
 ```
 tests/
 ├── setup.ts                  # GAS グローバル API のモック定義
+├── helpers/
+│   └── loadTextFixtureCases.ts  # フィクスチャ駆動テストの読み込み
+├── fixtures/
+│   ├── README.md
+│   └── normalizeDocumentText/   # normalizeDocumentText 用 input / expected
 ├── import/
 │   └── schedule.test.ts      # インポート全体・フェーズ分割・実行設定
 ├── utils/
@@ -288,10 +328,27 @@ tests/
     ├── csv.test.ts
     ├── document.test.ts
     ├── files.test.ts
+    ├── normalizeDocumentText.test.ts  # フィクスチャ駆動
     └── targets.test.ts
 ```
 
 `tests/import/schedule.test.ts` では `importSchedule` に渡す `ScheduleImportRunOptions` の各 `mode` と、フェーズ専用関数（`importScheduleCreateDocuments` など）の振る舞いを検証しています。
+
+### フィクスチャ駆動テスト（`normalizeDocumentText`）
+
+`tests/drive/normalizeDocumentText.test.ts` は `runTextFixtureCases` で `tests/fixtures/normalizeDocumentText/<patternId>/` の `input.txt` と `expected.txt` を使い、End-to-End で正規化結果を検証します。パターンごとに1つの変換要件をカバーする構成です。
+
+| patternId | 内容 |
+| --- | --- |
+| `01_empty` | 空入力 |
+| `02_non_square_passthrough` | ■ 以外の行はそのまま |
+| `03_line_merge` | ■ 行への続き行結合 |
+| `04_inline_split` | 同一行内の複数 ■ 分割 |
+| `05_square_spaces` | ■ 行の OCR スペース削除 |
+| `06_trailing_newline` | 末尾改行の保持 |
+| `07_multiple_square_lines` | 別行に並ぶ複数 ■ エントリ |
+
+デバッグ時は対象パターンのディレクトリに空ファイル `only` を置くと、そのパターンだけ実行されます。実装中のパターンは `skip` ファイルで一時スキップできます。詳細は `tests/fixtures/README.md` を参照してください。
 
 ### GAS API のモック
 
