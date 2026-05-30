@@ -8,6 +8,7 @@
     "build": "tsc && node scripts/prepare-gas-output.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:fixture": "node scripts/scaffold-text-fixture.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "clasp": "clasp",
