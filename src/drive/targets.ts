@@ -1,10 +1,24 @@
+export interface SkippedTargetFile {
+  fileId: string;
+  fileName: string;
+  mimeType: string;
+}
+
+export interface ImportTargetFolderScan {
+  targetFileIds: string[];
+  skippedFiles: SkippedTargetFile[];
+}
+
 /**
- * フォルダIDに該当する対象ファイルIDの一覧を取得する。
+ * フォルダ内のファイルを走査し、対象ファイルと除外ファイルを返す。
  * @param {string} folderId フォルダID
- * @return {string[]} イメージファイルID
+ * @return {ImportTargetFolderScan} 走査結果
  */
-export function getTagetFileIds(folderId: string): string[] {
-  const result: string[] = [];
+export function scanImportTargetFolder(folderId: string): ImportTargetFolderScan {
+  const result: ImportTargetFolderScan = {
+    targetFileIds: [],
+    skippedFiles: [],
+  };
 
   const folder = DriveApp.getFolderById(folderId);
 
@@ -14,14 +28,29 @@ export function getTagetFileIds(folderId: string): string[] {
 
     const mimeType = file.getMimeType();
 
-    // ファイルタイプが画像またはPDFではないか
     if (!(mimeType.startsWith("image/") || mimeType === "application/pdf")) {
-      // 画像またはPDFではない
+      result.skippedFiles.push({
+        fileId: file.getId(),
+        fileName: file.getName(),
+        mimeType,
+      });
       continue;
     }
 
-    result.push(file.getId());
+    result.targetFileIds.push(file.getId());
   }
 
+  return result;
+}
+
+/**
+ * フォルダIDに該当する対象ファイルIDの一覧を取得する。
+ * @param {string} folderId フォルダID
+ * @return {string[]} イメージファイルID
+ */
+export function getTagetFileIds(folderId: string): string[] {
+  let result: string[] = [];
+
+  result = scanImportTargetFolder(folderId).targetFileIds;
   return result;
 }

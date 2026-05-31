@@ -116,7 +116,9 @@ describe("createDocuments", () => {
 
     const result = createDocuments("input-folder-id", "output-folder-id");
 
-    expect(result).toEqual(["converted-doc-id"]);
+    expect(result).toEqual([
+      { sourceFileId: "file-1", convertedFileId: "converted-doc-id" },
+    ]);
     expect(mockMoveTo).toHaveBeenCalled();
     expect(saveNormalizedTextFile).toHaveBeenCalledWith(
       "scan.png",

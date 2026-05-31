@@ -54,17 +54,22 @@ export function getText(documentFileId: string): string {
   return result;
 }
 
+export interface DocumentConversionResult {
+  sourceFileId: string;
+  convertedFileId: string;
+}
+
 /**
  * 入力フォルダIDに該当するファイル一覧の全てのドキュメントを出力フォルダIDのフォルダ内に作成する。
  * @param {string} inputFolderId 入力フォルダID
  * @param {string} outputFolderId 出力フォルダID
- * @return {string[]} ドキュメントIDの一覧
+ * @return {DocumentConversionResult[]} 変換結果の一覧
  */
 export function createDocuments(
   inputFolderId: string,
   outputFolderId: string,
-): string[] {
-  const result: string[] = [];
+): DocumentConversionResult[] {
+  const result: DocumentConversionResult[] = [];
   const targetFileIds = getTagetFileIds(inputFolderId);
   for (const targetFileId of targetFileIds) {
     const inputFile = DriveApp.getFileById(targetFileId);
@@ -84,7 +89,10 @@ export function createDocuments(
     );
     writeLog(`正規化テキストファイルID：[${normalizedTextFileId}]`);
 
-    result.push(convertedFileId);
+    result.push({
+      sourceFileId: targetFileId,
+      convertedFileId,
+    });
 
     deleteFileById(convertedFileId, convertedFileId);
     writeLog("終了しました。");

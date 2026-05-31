@@ -1,8 +1,8 @@
 import { LOG_SHEET_NAME } from "../constants";
 import { getRequiredConfig } from "../config/scriptProperties";
 import { writeLog } from "../logging/writeLog";
-import { createDocuments, getText } from "../drive/document";
-import { getTagetFileIds } from "../drive/targets";
+import { createDocuments, getText, type DocumentConversionResult } from "../drive/document";
+import { scanImportTargetFolder, type ImportTargetFolderScan } from "../drive/targets";
 import { deleteFileByName, moveFileToFolder } from "../drive/files";
 import { saveNormalizedTextFile } from "../drive/text";
 import { createCalendarImportFile } from "../calendar/parser";
@@ -68,12 +68,26 @@ function loadScheduleImportContext(): ScheduleImportContext {
   return result;
 }
 
+function logDriveFolderSetting(label: string, folderId: string): void {
+  writeLog(`${label}ID：[${folderId}]`);
+  try {
+    const folder = DriveApp.getFolderById(folderId);
+    writeLog(`${label}名：[${folder.getName()}]`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    writeLog(
+      `${label}名：取得失敗（IDが誤っているかアクセス権がありません）: ${message}`,
+    );
+  }
+}
+
 function logScheduleImportContext(ctx: ScheduleImportContext): void {
   writeLog("----- 設定情報を取得します。 -----");
-  writeLog(`インポート対象フォルダID：[${ctx.importTargetFolderId}]`);
-  writeLog(`インポート完了フォルダID：[${ctx.importCompletedFolderId}]`);
-  writeLog(
-    `中間ファイル生成フォルダID：[${ctx.intermediateFileGenerationFolderId}]`,
+  logDriveFolderSetting("インポート対象フォルダ", ctx.importTargetFolderId);
+  logDriveFolderSetting("インポート完了フォルダ", ctx.importCompletedFolderId);
+  logDriveFolderSetting(
+    "中間ファイル生成フォルダ",
+    ctx.intermediateFileGenerationFolderId,
   );
   writeLog(`カレンダーID：[${ctx.calendarId}]`);
   writeLog("----- 設定情報を取得しました。 -----");
@@ -134,22 +148,46 @@ function runScheduleImportPhase(
 function createConvertedDocuments(
   ctx: ScheduleImportContext,
   state: ScheduleImportState,
-): string[] | null {
-  let result: string[] | null = null;
+): DocumentConversionResult[] | null {
+  let result: DocumentConversionResult[] | null = null;
 
   writeLog("----- ドキュメントを作成します。 -----");
-  const convertedFileIds = createDocuments(
+  const targetScan = scanImportTargetFolder(ctx.importTargetFolderId);
+  writeLog(
+    `インポート対象フォルダ内の画像/PDF：[${targetScan.targetFileIds.length}] 件`,
+  );
+  for (const skippedFile of targetScan.skippedFiles) {
+    writeLog(
+      `  対象外（画像/PDF以外）: ファイル名=[${skippedFile.fileName}], ID=[${skippedFile.fileId}], MIME=[${skippedFile.mimeType}]`,
+    );
+  }
+
+  const conversions = createDocuments(
     ctx.importTargetFolderId,
     ctx.intermediateFileGenerationFolderId,
   );
-  if (convertedFileIds.length <= 0) {
+  if (conversions.length <= 0) {
     writeLog("インポート対象に該当ファイルがありません。");
+    if (targetScan.skippedFiles.length > 0) {
+      writeLog(
+        "（フォルダ内にファイルはありますが、画像/PDF 以外のため対象外です。IMPORT_TARGET_FOLDER_ID が正しいか確認してください。）",
+      );
+    } else {
+      writeLog(
+        "（フォルダが空か、IMPORT_TARGET_FOLDER_ID が誤っている可能性があります。設定のフォルダ名と実際の画像の場所を照合してください。）",
+      );
+    }
     state.hasWarning = true;
     return result;
   }
-  writeLog(`変換ドキュメント数：[${convertedFileIds.length}]`);
+  writeLog(`変換ドキュメント数：[${conversions.length}]`);
+  for (const conversion of conversions) {
+    writeLog(
+      `  元画像ID：[${conversion.sourceFileId}] → 変換ドキュメントID：[${conversion.convertedFileId}]`,
+    );
+  }
   writeLog("----- ドキュメントを作成しました。 -----");
-  result = convertedFileIds;
+  result = conversions;
   return result;
 }
 
@@ -218,18 +256,120 @@ function resolveConvertedFileIds(urlsOrIds: string[]): string[] {
   return result;
 }
 
-function moveImportTargetsToCompleted(
-  ctx: ScheduleImportContext,
-): void {
-  writeLog("----- インポート対象ファイルを移動します。 -----");
-  const tagetFileIds = getTagetFileIds(ctx.importTargetFolderId);
-  for (const targetFileId of tagetFileIds) {
-    moveFileToFolder(targetFileId, ctx.importCompletedFolderId);
+function logSkippedTargetFiles(
+  importTargetFolderId: string,
+): ImportTargetFolderScan {
+  let result: ImportTargetFolderScan = {
+    targetFileIds: [],
+    skippedFiles: [],
+  };
+
+  result = scanImportTargetFolder(importTargetFolderId);
+  for (const skippedFile of result.skippedFiles) {
     writeLog(
-      `ファイルID：[${targetFileId}] をインポート完了フォルダへ移動しました。`,
+      `  対象外（画像/PDF以外）: ファイル名=[${skippedFile.fileName}], ID=[${skippedFile.fileId}], MIME=[${skippedFile.mimeType}]`,
     );
   }
-  writeLog("----- インポート対象ファイルを移動しました。 -----");
+  return result;
+}
+
+function moveImportTargetsToCompleted(
+  ctx: ScheduleImportContext,
+  state: ScheduleImportState,
+  sourceFileIds?: string[],
+): void {
+  writeLog("----- インポート対象ファイルを移動します。 -----");
+
+  let targetFolderName: string = "";
+  try {
+    targetFolderName = DriveApp.getFolderById(ctx.importTargetFolderId).getName();
+    writeLog(
+      `移動元フォルダ：[${targetFolderName}]（ID: ${ctx.importTargetFolderId}）`,
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    writeLog(
+      `エラー: インポート対象フォルダID [${ctx.importTargetFolderId}] にアクセスできません: ${message}`,
+    );
+    writeLog(
+      "Script Properties の IMPORT_TARGET_FOLDER_ID を確認してください。",
+    );
+    state.hasWarning = true;
+    writeLog("----- インポート対象ファイルの移動を中断しました。 -----");
+    return;
+  }
+
+  let completedFolderName: string = "";
+  try {
+    completedFolderName = DriveApp.getFolderById(
+      ctx.importCompletedFolderId,
+    ).getName();
+    writeLog(
+      `移動先フォルダ：[${completedFolderName}]（ID: ${ctx.importCompletedFolderId}）`,
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    writeLog(
+      `エラー: インポート完了フォルダID [${ctx.importCompletedFolderId}] にアクセスできません: ${message}`,
+    );
+    writeLog(
+      "Script Properties の IMPORT_COMPLETED_FOLDER_ID を確認してください。",
+    );
+    state.hasWarning = true;
+    writeLog("----- インポート対象ファイルの移動を中断しました。 -----");
+    return;
+  }
+
+  let tagetFileIds: string[] = [];
+  if (sourceFileIds && sourceFileIds.length > 0) {
+    tagetFileIds = sourceFileIds;
+    writeLog(
+      `移動対象（OCR変換済みの元画像）: [${tagetFileIds.length}] 件`,
+    );
+  } else {
+    const targetScan = logSkippedTargetFiles(ctx.importTargetFolderId);
+    tagetFileIds = targetScan.targetFileIds;
+    writeLog(
+      `移動対象（フォルダ走査）: [${tagetFileIds.length}] 件`,
+    );
+  }
+
+  if (tagetFileIds.length <= 0) {
+    writeLog("警告: 移動対象の画像/PDFファイルが0件です。");
+    writeLog(
+      "確認事項: 1) IMPORT_TARGET_FOLDER_ID が正しいか 2) フォルダ直下に画像/PDF があるか（サブフォルダ内は対象外） 3) 既に移動済みでないか",
+    );
+    state.hasWarning = true;
+    writeLog("----- インポート対象ファイルの移動を完了しました（移動0件）。 -----");
+    return;
+  }
+
+  let movedCount: number = 0;
+  for (const targetFileId of tagetFileIds) {
+    let fileName: string = targetFileId;
+    try {
+      const file = DriveApp.getFileById(targetFileId);
+      fileName = file.getName();
+      writeLog(
+        `移動開始: ファイル名=[${fileName}], ID=[${targetFileId}]`,
+      );
+      moveFileToFolder(targetFileId, ctx.importCompletedFolderId);
+      movedCount += 1;
+      writeLog(
+        `移動完了: ファイル名=[${fileName}], ID=[${targetFileId}] → [${completedFolderName}]`,
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      writeLog(
+        `移動失敗: ファイル名=[${fileName}], ID=[${targetFileId}]: ${message}`,
+      );
+      state.hasWarning = true;
+    }
+  }
+
+  writeLog(
+    `----- インポート対象ファイルを移動しました（${movedCount}/${tagetFileIds.length} 件）。 -----`,
+  );
 }
 
 /**
@@ -270,11 +410,12 @@ export function importSchedule(
 
   runScheduleImportPhase((ctx, state) => {
     if (mode === "moveOnly") {
-      moveImportTargetsToCompleted(ctx);
+      moveImportTargetsToCompleted(ctx, state);
       return;
     }
 
-    let convertedFileIds: string[] | null = null;
+    let conversions: DocumentConversionResult[] | null = null;
+    let convertedFileIds: string[] = [];
 
     if (mode === "importOnly") {
       if (manualDocumentUrls.length <= 0) {
@@ -286,10 +427,13 @@ export function importSchedule(
       }
       convertedFileIds = resolveConvertedFileIds(manualDocumentUrls);
     } else {
-      convertedFileIds = createConvertedDocuments(ctx, state);
-      if (!convertedFileIds) {
+      conversions = createConvertedDocuments(ctx, state);
+      if (!conversions) {
         return;
       }
+      convertedFileIds = conversions.map(
+        (conversion) => conversion.convertedFileId,
+      );
       if (mode === "createDocumentsOnly") {
         return;
       }
@@ -303,7 +447,10 @@ export function importSchedule(
     );
 
     if (mode === "all") {
-      moveImportTargetsToCompleted(ctx);
+      const sourceFileIds = conversions?.map(
+        (conversion) => conversion.sourceFileId,
+      );
+      moveImportTargetsToCompleted(ctx, state, sourceFileIds);
     }
   });
 }

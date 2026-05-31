@@ -1,5 +1,86 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getTagetFileIds } from "../../src/drive/targets";
+import {
+  getTagetFileIds,
+  scanImportTargetFolder,
+} from "../../src/drive/targets";
+
+describe("scanImportTargetFolder", () => {
+  beforeEach(() => {
+    vi.mocked(DriveApp.getFolderById).mockReset();
+  });
+
+  it("画像ファイルの ID を返す", () => {
+    const mockFiles = [
+      { getId: () => "img-1", getMimeType: () => "image/png", getName: () => "a.png" },
+      { getId: () => "img-2", getMimeType: () => "image/jpeg", getName: () => "b.jpg" },
+    ];
+    let index = 0;
+    const mockIterator = {
+      hasNext: vi.fn(() => index < mockFiles.length),
+      next: vi.fn(() => mockFiles[index++]),
+    };
+    vi.mocked(DriveApp.getFolderById).mockReturnValue({
+      getFiles: vi.fn(() => mockIterator),
+    } as never);
+
+    const result = scanImportTargetFolder("folder-id");
+    expect(result.targetFileIds).toEqual(["img-1", "img-2"]);
+    expect(result.skippedFiles).toEqual([]);
+  });
+
+  it("PDF ファイルの ID を返す", () => {
+    const mockFiles = [
+      { getId: () => "pdf-1", getMimeType: () => "application/pdf", getName: () => "a.pdf" },
+    ];
+    let index = 0;
+    const mockIterator = {
+      hasNext: vi.fn(() => index < mockFiles.length),
+      next: vi.fn(() => mockFiles[index++]),
+    };
+    vi.mocked(DriveApp.getFolderById).mockReturnValue({
+      getFiles: vi.fn(() => mockIterator),
+    } as never);
+
+    const result = scanImportTargetFolder("folder-id");
+    expect(result.targetFileIds).toEqual(["pdf-1"]);
+    expect(result.skippedFiles).toEqual([]);
+  });
+
+  it("画像・PDF 以外のファイルは除外する", () => {
+    const mockFiles = [
+      { getId: () => "txt-1", getMimeType: () => "text/plain", getName: () => "a.txt" },
+      { getId: () => "img-1", getMimeType: () => "image/png", getName: () => "b.png" },
+    ];
+    let index = 0;
+    const mockIterator = {
+      hasNext: vi.fn(() => index < mockFiles.length),
+      next: vi.fn(() => mockFiles[index++]),
+    };
+    vi.mocked(DriveApp.getFolderById).mockReturnValue({
+      getFiles: vi.fn(() => mockIterator),
+    } as never);
+
+    const result = scanImportTargetFolder("folder-id");
+    expect(result.targetFileIds).toEqual(["img-1"]);
+    expect(result.skippedFiles).toEqual([
+      { fileId: "txt-1", fileName: "a.txt", mimeType: "text/plain" },
+    ]);
+  });
+
+  it("フォルダにファイルがない場合は空配列を返す", () => {
+    const mockIterator = {
+      hasNext: vi.fn(() => false),
+      next: vi.fn(),
+    };
+    vi.mocked(DriveApp.getFolderById).mockReturnValue({
+      getFiles: vi.fn(() => mockIterator),
+    } as never);
+
+    const result = scanImportTargetFolder("folder-id");
+    expect(result.targetFileIds).toEqual([]);
+    expect(result.skippedFiles).toEqual([]);
+  });
+});
 
 describe("getTagetFileIds", () => {
   beforeEach(() => {
