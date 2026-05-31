@@ -1,8 +1,86 @@
 import { splitInlineSquareEntries } from "./splitInlineSquareEntries";
+import { splitInlineOcrDateEntries } from "./splitInlineOcrDateEntries";
+import { isScheduleEntryStart } from "./scheduleEntryPatterns";
+
+/**
+ * 直前のエントリを result へ flush する。
+ * @param current 結合中のエントリ
+ * @param result 出力先
+ */
+function flushCurrent(
+  current: string | null,
+  result: string[],
+): void {
+  if (current === null) {
+    return;
+  }
+
+  result.push(...splitInlineSquareEntries(current));
+}
+
+/**
+ * スケジュールエントリ行の先頭に ■ を付与する。
+ * @param line エントリ行
+ * @return ■ 付きエントリ行
+ */
+function ensureSquarePrefix(line: string): string {
+  let result: string = line;
+
+  if (result.startsWith("■")) {
+    return result;
+  }
+
+  result = "■" + result;
+  return result;
+}
+
+/**
+ * 1行を OCR 日付分割後のセグメント一覧として処理する。
+ * @param content trimStart 済み行
+ * @param current 結合中のエントリ
+ * @param result 出力先
+ * @param passthroughLine passthrough 用の元行
+ */
+function processLineSegments(
+  content: string,
+  current: string | null,
+  result: string[],
+  passthroughLine: string,
+): string | null {
+  let nextCurrent: string | null = current;
+  const segments = splitInlineOcrDateEntries(content);
+
+  for (const segment of segments) {
+    if (isScheduleEntryStart(segment)) {
+      flushCurrent(nextCurrent, result);
+      nextCurrent = ensureSquarePrefix(segment);
+      continue;
+    }
+
+    if (segment.startsWith("■")) {
+      if (nextCurrent !== null) {
+        nextCurrent += segment.slice(1);
+        continue;
+      }
+
+      result.push(passthroughLine);
+      continue;
+    }
+
+    if (nextCurrent !== null) {
+      nextCurrent += segment;
+      continue;
+    }
+
+    result.push(passthroughLine);
+  }
+
+  return nextCurrent;
+}
 
 /**
  * 行一覧から ■ エントリとその他の行を収集する。
- * ■ で始まらない行は直前の ■ エントリに結合する。
+ * ■ で始まらない OCR スケジュール行もエントリ起点として扱う。
  * @param lines 入力テキストの行一覧
  * @return 正規化前のエントリ一覧
  */
@@ -16,26 +94,10 @@ export function collectEntries(lines: string[]): string[] {
     }
 
     const content = line.trimStart();
-
-    if (content.startsWith("■")) {
-      if (current !== null) {
-        result.push(...splitInlineSquareEntries(current));
-      }
-      current = content;
-      continue;
-    }
-
-    if (current !== null) {
-      current += content;
-      continue;
-    }
-
-    result.push(line);
+    current = processLineSegments(content, current, result, line);
   }
 
-  if (current !== null) {
-    result.push(...splitInlineSquareEntries(current));
-  }
+  flushCurrent(current, result);
 
   return result;
 }

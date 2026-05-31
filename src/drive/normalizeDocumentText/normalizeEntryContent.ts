@@ -1,4 +1,5 @@
 import { normalizeSquareEntry } from "./normalizeSquareEntry";
+import { fixOcrDatePrefix } from "./fixOcrDatePrefix";
 
 /**
  * 1エントリの内容を正規化する（パイプライン第3段階）。
@@ -14,6 +15,7 @@ export function normalizeEntryContent(entry: string): string {
   }
 
   result = normalizeSquareEntry(result);
+  result = fixOcrDatePrefix(result);
 
   return result;
 }
