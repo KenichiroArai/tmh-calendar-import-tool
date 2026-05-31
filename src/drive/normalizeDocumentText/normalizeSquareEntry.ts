@@ -5,9 +5,6 @@
  * @return 正規化後の行
  */
 export function normalizeSquareEntry(line: string): string {
-  let result: string = "";
-
-  result = line.replace(/\s/g, "");
-
+  const result = line.replace(/\s/g, "");
   return result;
 }

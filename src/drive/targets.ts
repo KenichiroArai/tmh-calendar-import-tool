@@ -49,8 +49,6 @@ export function scanImportTargetFolder(folderId: string): ImportTargetFolderScan
  * @return {string[]} イメージファイルID
  */
 export function getTagetFileIds(folderId: string): string[] {
-  let result: string[] = [];
-
-  result = scanImportTargetFolder(folderId).targetFileIds;
+  const result = scanImportTargetFolder(folderId).targetFileIds;
   return result;
 }

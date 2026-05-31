@@ -50,14 +50,7 @@ function prepareLogSheet(): void {
 }
 
 function loadScheduleImportContext(): ScheduleImportContext {
-  let result: ScheduleImportContext = {
-    importTargetFolderId: "",
-    importCompletedFolderId: "",
-    intermediateFileGenerationFolderId: "",
-    calendarId: "",
-  };
-
-  result = {
+  const result: ScheduleImportContext = {
     importTargetFolderId: getRequiredConfig("IMPORT_TARGET_FOLDER_ID"),
     importCompletedFolderId: getRequiredConfig("IMPORT_COMPLETED_FOLDER_ID"),
     intermediateFileGenerationFolderId: getRequiredConfig(
@@ -244,27 +237,23 @@ function importConvertedDocumentsToCalendar(
  * フェーズ3: インポート対象ファイルを完了フォルダへ移動する。
  */
 function resolveConvertedFileIds(urlsOrIds: string[]): string[] {
-  let result: string[] = [];
+  const result: string[] = [];
 
-  result = urlsOrIds.map((entry) => {
+  for (const entry of urlsOrIds) {
     let id: string = entry;
     if (entry.includes("/d/")) {
       id = extractIdFromUrl(entry);
     }
-    return id;
-  });
+    result.push(id);
+  }
+
   return result;
 }
 
 function logSkippedTargetFiles(
   importTargetFolderId: string,
 ): ImportTargetFolderScan {
-  let result: ImportTargetFolderScan = {
-    targetFileIds: [],
-    skippedFiles: [],
-  };
-
-  result = scanImportTargetFolder(importTargetFolderId);
+  const result = scanImportTargetFolder(importTargetFolderId);
   for (const skippedFile of result.skippedFiles) {
     writeLog(
       `  対象外（画像/PDF以外）: ファイル名=[${skippedFile.fileName}], ID=[${skippedFile.fileId}], MIME=[${skippedFile.mimeType}]`,

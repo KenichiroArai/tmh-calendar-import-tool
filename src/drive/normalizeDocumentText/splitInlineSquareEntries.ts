@@ -4,12 +4,9 @@
  * @return 分割後のエントリ一覧
  */
 export function splitInlineSquareEntries(text: string): string[] {
-  let result: string[] = [];
-
-  result = text
+  const result = text
     .split(/(?=■)/)
     .filter((part) => part.length > 0)
     .map((part) => part.trimEnd());
-
   return result;
 }

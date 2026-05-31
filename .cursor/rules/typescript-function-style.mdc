@@ -10,12 +10,14 @@ Agent（Auto）で `src/**/*.ts` を編集・追加するときは、既存コ�
 
 ## result の宣言と return
 
-- 戻り値を持つ関数では、先頭で `let result`（または `const result`）を宣言する。
-- 関数の最後は `return result;` で終える（早期 return する分岐を除く）。
-- 空文字・空配列など、型に合う初期値を付ける。
+- 戻り値を持つ関数では、先頭で `result` を宣言する（`let result` または `const result`）。
+  - **再代入・累積更新がある** → `let result`（例: `result += ...`, `result = fix...(result)`）
+  - **一度だけ代入して返す** → `const result`（例: `const result = scan...`, `const result = text.replace(...)`）
+- **終端は必ず `return result;`** とする（早期 return するガード節を除く）。式や別名をそのまま `return` しない。
+- 空文字・空配列など、型に合う初期値を付ける（`let` で後から代入する場合）。
 
 ```typescript
-// ✅ このプロジェクトの慣例
+// ✅ 再代入あり → let
 export function normalizeDocumentText(text: string): string {
   let result: string = "";
 
@@ -23,9 +25,15 @@ export function normalizeDocumentText(text: string): string {
     return result;
   }
 
-  // ... メイン処理 ...
-  result = entries.map(...).join("\n");
+  result = runNormalizePipeline(text);
+  return result;
+}
+```
 
+```typescript
+// ✅ 一度だけ代入 → const
+export function getTagetFileIds(folderId: string): string[] {
+  const result = scanImportTargetFolder(folderId).targetFileIds;
   return result;
 }
 ```
@@ -37,13 +45,22 @@ export function getText(id: string): string {
 }
 ```
 
+```typescript
+// ❌ 避ける: 別名を return（終端は return result）
+function processLineSegments(...): string | null {
+  let result: string | null = current;
+  // ...
+  return lineResult;
+}
+```
+
 ## if のネストを浅くする（ガード節）
 
-- `if` のブロック内にメイン処理しかない場合は、条件を反転して早期に `return` / `continue` / `throw` し、メイン処理は外側（同じスコープ）に書く。
+- `if` のブロック内にメイン処理しかない場合は、条件を反転して早期に `return result` / `continue` / `throw` し、メイン処理は外側（同じスコープ）に書く。
 - ネストが 2 段以上になる場合は、ガード節への分割を優先する。
 
 ```typescript
-// ✅ ガード節 + 外側でメイン処理（normalizeDocumentText.ts と同型）
+// ✅ ガード節 + 外側でメイン処理
 export function normalizeDocumentText(text: string): string {
   let result: string = "";
 
@@ -51,8 +68,7 @@ export function normalizeDocumentText(text: string): string {
     return result;
   }
 
-  const entries = collectEntries(normalized.split("\n"));
-  result = entries.map(...).join("\n");
+  result = runNormalizePipeline(text);
   return result;
 }
 ```
@@ -62,8 +78,7 @@ export function normalizeDocumentText(text: string): string {
 export function normalizeDocumentText(text: string): string {
   let result: string = "";
   if (text !== "") {
-    const entries = collectEntries(...);
-    result = entries.map(...).join("\n");
+    result = runNormalizePipeline(text);
   }
   return result;
 }
@@ -74,8 +89,8 @@ export function normalizeDocumentText(text: string): string {
 if (!matchResult2) {
   return result;
 }
-// ここからメイン処理
 result += "...";
+return result;
 ```
 
 - ループ内の空行スキップなどは `continue` で早期に抜ける（`collectEntries` の `if (line.trim() === "") { continue; }` を参照）。
@@ -83,4 +98,4 @@ result += "...";
 ## 例外
 
 - `void` 関数や副作用のみの処理は `result` パターン不要。
-- ループで `result.push(...)` だけ行う場合は `const result: T[] = []` でもよい（`createDocuments` を参照）。
+- ループで `result.push(...)` だけ行う場合は `const result: T[] = []` でもよい（`createDocuments`, `resolveConvertedFileIds` を参照）。終端は `return result;`。

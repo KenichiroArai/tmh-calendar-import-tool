@@ -19,15 +19,13 @@ const VALID_MODES: readonly ScheduleImportMode[] = [
  * スプレッドシートのモードセル値を ScheduleImportMode に変換する。
  */
 export function parseScheduleImportMode(raw: unknown): ScheduleImportMode {
-  let result: ScheduleImportMode = "all";
-
   const mode = String(raw ?? "").trim();
   if (!VALID_MODES.includes(mode as ScheduleImportMode)) {
     throw new Error(
       `モードが不正です。「${CONTROL_PANEL_MODE_LABEL}」に次のいずれかを入力してください: ${VALID_MODES.join(", ")}（入力値: "${mode}"）`,
     );
   }
-  result = mode as ScheduleImportMode;
+  const result = mode as ScheduleImportMode;
   return result;
 }
 
@@ -36,14 +34,13 @@ export function parseScheduleImportMode(raw: unknown): ScheduleImportMode {
  * 改行またはカンマで複数指定できる。
  */
 export function parseManualDocumentUrls(raw: unknown): string[] {
-  let result: string[] = [];
-
   const text = String(raw ?? "").trim();
   if (text === "") {
+    const result: string[] = [];
     return result;
   }
 
-  result = text
+  const result = text
     .split(/[\n,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
@@ -56,17 +53,12 @@ export function parseManualDocumentUrls(raw: unknown): string[] {
 export function readScheduleImportRunFromSheet(
   sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet(),
 ): ScheduleImportRunOptions {
-  let result: ScheduleImportRunOptions = {
-    mode: "all",
-    manualDocumentUrls: [],
-  };
-
   const mode = parseScheduleImportMode(
     sheet.getRange(CONTROL_PANEL_MODE_CELL).getValue(),
   );
   const manualDocumentUrls = parseManualDocumentUrls(
     sheet.getRange(CONTROL_PANEL_DOCUMENT_URLS_CELL).getValue(),
   );
-  result = { mode, manualDocumentUrls };
+  const result: ScheduleImportRunOptions = { mode, manualDocumentUrls };
   return result;
 }

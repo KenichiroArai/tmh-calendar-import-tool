@@ -14,8 +14,6 @@ export function createTextFile(
   contents: string,
   outputFolderId: string,
 ): string {
-  let result: string = "";
-
   const contentType = "text/plain";
   const charset = "UTF-8";
   const folder = DriveApp.getFolderById(folderId);
@@ -30,7 +28,7 @@ export function createTextFile(
   const outputFolder = DriveApp.getFolderById(outputFolderId);
   file.moveTo(outputFolder);
 
-  result = file.getId();
+  const result = file.getId();
   return result;
 }
 
@@ -46,16 +44,13 @@ export function saveNormalizedTextFile(
   text: string,
   outputFolderId: string,
 ): string {
-  let result: string = "";
-
   const fileName = baseFileName + ".txt";
   deleteFileByName(fileName);
-  result = createTextFile(
+  const result = createTextFile(
     outputFolderId,
     fileName,
     text,
     outputFolderId,
   );
-
   return result;
 }

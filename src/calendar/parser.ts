@@ -12,13 +12,7 @@ export function getWriteContents(matchResult: RegExpMatchArray): string {
   const PATTERN_DATA2 = /(.+)■(\d+\/\d+)\(.\)(\d+:\d+).?(.*)/;
 
   const matchResultSquare = matchResult[3].match(PATTERN_SQUARE);
-  if (matchResultSquare) {
-    const matchResult2 = matchResult[3].match(PATTERN_DATA2);
-    if (!matchResult2) {
-      return result;
-    }
-    matchResult[3] = matchResult2[1];
-
+  if (!matchResultSquare) {
     result += "\n";
     result +=
       matchResult[1] +
@@ -29,18 +23,15 @@ export function getWriteContents(matchResult: RegExpMatchArray): string {
       ", " +
       matchResult[3];
 
-    result += "\n";
-    result +=
-      matchResult2[2] +
-      ", " +
-      matchResult2[3] +
-      ", " +
-      matchResult2[4] +
-      ", " +
-      matchResult2[4];
-
     return result;
   }
+
+  const matchResult2 = matchResult[3].match(PATTERN_DATA2);
+  if (!matchResult2) {
+    return result;
+  }
+
+  matchResult[3] = matchResult2[1];
 
   result += "\n";
   result +=
@@ -51,6 +42,16 @@ export function getWriteContents(matchResult: RegExpMatchArray): string {
     matchResult[3] +
     ", " +
     matchResult[3];
+
+  result += "\n";
+  result +=
+    matchResult2[2] +
+    ", " +
+    matchResult2[3] +
+    ", " +
+    matchResult2[4] +
+    ", " +
+    matchResult2[4];
 
   return result;
 }
@@ -69,8 +70,6 @@ export function createCalendarImportFile(
   contents: string,
   outputFolderId: string,
 ): string {
-  let result: string = "";
-
   const PATTERN_DATA = /.(\d+\/\d+)\(.\)(\d+:\d+).?(.*)/;
   const PATTERN_HEAD_SQUARE = /^■/;
 
@@ -89,27 +88,19 @@ export function createCalendarImportFile(
       continue;
     }
 
-    // ■が先頭にないか
-    if (!line_wk.match(PATTERN_HEAD_SQUARE)) {
-      // 先頭にない場合
-
+    if (line_wk.match(PATTERN_HEAD_SQUARE)) {
       const matchResult = line_wk.match(PATTERN_DATA);
-      // データパーンに一致しないか
       if (!matchResult) {
-        // 一致しない場合
-
-        writeContents += line_wk;
-
         continue;
       }
 
       writeContents += getWriteContents(matchResult);
-
       continue;
     }
 
     const matchResult = line_wk.match(PATTERN_DATA);
     if (!matchResult) {
+      writeContents += line_wk;
       continue;
     }
 
@@ -118,6 +109,6 @@ export function createCalendarImportFile(
 
   writeContents = writeContents.substring(1, writeContents.length);
 
-  result = createCsvFile(folderId, fileName, writeContents, outputFolderId);
+  const result = createCsvFile(folderId, fileName, writeContents, outputFolderId);
   return result;
 }

@@ -11,8 +11,6 @@ import { saveNormalizedTextFile } from "./text";
  * @return {string} ドキュメントID
  */
 export function createDocument(inputFileId: string, outputFolderId: string): string {
-  let result: string = "";
-
   const drive = Drive as unknown as GoogleAppsScript.Drive_v2;
   if (!drive) {
     throw new Error(
@@ -37,7 +35,7 @@ export function createDocument(inputFileId: string, outputFolderId: string): str
     DriveApp.getFolderById(outputFolderId),
   );
 
-  result = documentFile.id;
+  const result = documentFile.id;
   return result;
 }
 

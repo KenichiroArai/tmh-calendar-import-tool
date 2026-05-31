@@ -6,12 +6,9 @@ import { PATTERN_INLINE_DATE_SPLIT } from "./scheduleEntryPatterns";
  * @return 分割後のセグメント一覧
  */
 export function splitInlineOcrDateEntries(text: string): string[] {
-  let result: string[] = [];
-
-  result = text
+  const result = text
     .split(PATTERN_INLINE_DATE_SPLIT)
     .filter((part) => part.length > 0)
     .map((part) => part.trimEnd());
-
   return result;
 }

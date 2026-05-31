@@ -38,44 +38,44 @@ function ensureSquarePrefix(line: string): string {
  * 1行を OCR 日付分割後のセグメント一覧として処理する。
  * @param content trimStart 済み行
  * @param current 結合中のエントリ
- * @param result 出力先
+ * @param collectedEntries 出力先
  * @param passthroughLine passthrough 用の元行
  */
 function processLineSegments(
   content: string,
   current: string | null,
-  result: string[],
+  collectedEntries: string[],
   passthroughLine: string,
 ): string | null {
-  let nextCurrent: string | null = current;
+  let result: string | null = current;
   const segments = splitInlineOcrDateEntries(content);
 
   for (const segment of segments) {
     if (isScheduleEntryStart(segment)) {
-      flushCurrent(nextCurrent, result);
-      nextCurrent = ensureSquarePrefix(segment);
+      flushCurrent(result, collectedEntries);
+      result = ensureSquarePrefix(segment);
       continue;
     }
 
     if (segment.startsWith("■")) {
-      if (nextCurrent !== null) {
-        nextCurrent += segment.slice(1);
+      if (result !== null) {
+        result += segment.slice(1);
         continue;
       }
 
-      result.push(passthroughLine);
+      collectedEntries.push(passthroughLine);
       continue;
     }
 
-    if (nextCurrent !== null) {
-      nextCurrent += segment;
+    if (result !== null) {
+      result += segment;
       continue;
     }
 
-    result.push(passthroughLine);
+    collectedEntries.push(passthroughLine);
   }
 
-  return nextCurrent;
+  return result;
 }
 
 /**

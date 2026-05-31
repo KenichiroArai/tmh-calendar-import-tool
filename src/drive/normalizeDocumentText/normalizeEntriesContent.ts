@@ -6,9 +6,6 @@ import { normalizeEntryContent } from "./normalizeEntryContent";
  * @return 内容正規化後のエントリ一覧
  */
 export function normalizeEntriesContent(entries: string[]): string[] {
-  let result: string[] = [];
-
-  result = entries.map((entry) => normalizeEntryContent(entry));
-
+  const result = entries.map((entry) => normalizeEntryContent(entry));
   return result;
 }

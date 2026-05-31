@@ -9,10 +9,7 @@ import { formatNormalizedOutput } from "./formatNormalizedOutput";
  * @return 末尾改行がある場合 true
  */
 function hasTrailingLineEnding(text: string): boolean {
-  let result: boolean = false;
-
-  result = text.endsWith("\n") || text.endsWith("\r\n");
-
+  const result = text.endsWith("\n") || text.endsWith("\r\n");
   return result;
 }
 
@@ -28,13 +25,10 @@ function hasTrailingLineEnding(text: string): boolean {
  * @return 正規化後のテキスト
  */
 export function runNormalizePipeline(text: string): string {
-  let result: string = "";
-
   const hasTrailingNewline = hasTrailingLineEnding(text);
   const lines = normalizeInputNewlines(text).split("\n");
   const structuredEntries = collectEntries(lines);
   const contentEntries = normalizeEntriesContent(structuredEntries);
-  result = formatNormalizedOutput(contentEntries, hasTrailingNewline);
-
+  const result = formatNormalizedOutput(contentEntries, hasTrailingNewline);
   return result;
 }

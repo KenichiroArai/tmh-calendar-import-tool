@@ -28,9 +28,7 @@ export const PATTERN_INLINE_DATE_SPLIT = new RegExp(
  * @return スケジュールエントリの場合 true
  */
 export function isSquarePrefixedScheduleEntry(line: string): boolean {
-  let result: boolean = false;
-
-  result = PATTERN_SQUARE_SCHEDULE_ENTRY.test(line);
+  const result = PATTERN_SQUARE_SCHEDULE_ENTRY.test(line);
   return result;
 }
 
