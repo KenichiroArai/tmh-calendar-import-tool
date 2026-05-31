@@ -50,7 +50,14 @@ function prepareLogSheet(): void {
 }
 
 function loadScheduleImportContext(): ScheduleImportContext {
-  return {
+  let result: ScheduleImportContext = {
+    importTargetFolderId: "",
+    importCompletedFolderId: "",
+    intermediateFileGenerationFolderId: "",
+    calendarId: "",
+  };
+
+  result = {
     importTargetFolderId: getRequiredConfig("IMPORT_TARGET_FOLDER_ID"),
     importCompletedFolderId: getRequiredConfig("IMPORT_COMPLETED_FOLDER_ID"),
     intermediateFileGenerationFolderId: getRequiredConfig(
@@ -58,6 +65,7 @@ function loadScheduleImportContext(): ScheduleImportContext {
     ),
     calendarId: getRequiredConfig("CALENDAR_ID"),
   };
+  return result;
 }
 
 function logScheduleImportContext(ctx: ScheduleImportContext): void {
@@ -127,6 +135,8 @@ function createConvertedDocuments(
   ctx: ScheduleImportContext,
   state: ScheduleImportState,
 ): string[] | null {
+  let result: string[] | null = null;
+
   writeLog("----- ドキュメントを作成します。 -----");
   const convertedFileIds = createDocuments(
     ctx.importTargetFolderId,
@@ -135,11 +145,12 @@ function createConvertedDocuments(
   if (convertedFileIds.length <= 0) {
     writeLog("インポート対象に該当ファイルがありません。");
     state.hasWarning = true;
-    return null;
+    return result;
   }
   writeLog(`変換ドキュメント数：[${convertedFileIds.length}]`);
   writeLog("----- ドキュメントを作成しました。 -----");
-  return convertedFileIds;
+  result = convertedFileIds;
+  return result;
 }
 
 /**
@@ -195,12 +206,16 @@ function importConvertedDocumentsToCalendar(
  * フェーズ3: インポート対象ファイルを完了フォルダへ移動する。
  */
 function resolveConvertedFileIds(urlsOrIds: string[]): string[] {
-  return urlsOrIds.map((entry) => {
+  let result: string[] = [];
+
+  result = urlsOrIds.map((entry) => {
+    let id: string = entry;
     if (entry.includes("/d/")) {
-      return extractIdFromUrl(entry);
+      id = extractIdFromUrl(entry);
     }
-    return entry;
+    return id;
   });
+  return result;
 }
 
 function moveImportTargetsToCompleted(

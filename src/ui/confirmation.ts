@@ -9,11 +9,14 @@ import {
 export function formatRunOptionsSummary(
   run: ScheduleImportRunOptions,
 ): string {
+  let result: string = "";
+
   const documentSummary =
     run.manualDocumentUrls.length > 0
       ? `\nドキュメント: ${run.manualDocumentUrls.length}件`
       : "";
-  return `モード: ${run.mode}${documentSummary}\n\nスケジュールインポートを実行しますか？`;
+  result = `モード: ${run.mode}${documentSummary}\n\nスケジュールインポートを実行しますか？`;
+  return result;
 }
 
 /**
