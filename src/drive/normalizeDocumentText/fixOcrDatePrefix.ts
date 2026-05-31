@@ -1,8 +1,4 @@
-const WEEKDAY = "[月火水木金土日]";
-
-const PATTERN_SQUARE_DATE = new RegExp(
-  `^(■)(\\d{2,})/(\\d{1,2})(\\(${WEEKDAY}\\))`,
-);
+import { PATTERN_SQUARE_DATE } from "./scheduleEntryPatterns";
 
 /**
  * OCR 由来の月誤認識（例: 19/23 → 9/23）を修正する。

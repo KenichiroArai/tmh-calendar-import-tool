@@ -1,8 +1,4 @@
-const WEEKDAY = "[月火水木金土日]";
-
-const PATTERN_INLINE_DATE_SPLIT = new RegExp(
-  `(?:^|(?<=\\s)(?<!■\\s))(?=(?:■\\s*)?\\d{1,2}/\\d{1,2}\\s*\\(${WEEKDAY}\\)\\s*\\d{1,2}:\\d{2})`,
-);
+import { PATTERN_INLINE_DATE_SPLIT } from "./scheduleEntryPatterns";
 
 /**
  * 同一行内の複数 OCR 日付エントリを分割する（構造正規化の一部）。

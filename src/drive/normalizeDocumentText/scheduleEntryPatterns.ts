@@ -14,6 +14,14 @@ const PATTERN_OCR_DATE_WITH_SPACE = new RegExp(
 
 const PATTERN_TILDE_AFTER_TIME = /\d{1,2}:\d{2}\s*~/;
 
+export const PATTERN_SQUARE_DATE = new RegExp(
+  `^(■)(\\d{2,})/(\\d{1,2})(\\(${WEEKDAY}\\))`,
+);
+
+export const PATTERN_INLINE_DATE_SPLIT = new RegExp(
+  `(?:^|(?<=\\s)(?<!■\\s))(?=(?:■\\s*)?\\d{1,2}/\\d{1,2}\\s*\\(${WEEKDAY}\\)\\s*\\d{1,2}:\\d{2})`,
+);
+
 /**
  * ■ 付きスケジュールエントリ行か判定する。
  * @param line 行テキスト
