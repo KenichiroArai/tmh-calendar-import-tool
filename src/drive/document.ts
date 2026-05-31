@@ -2,6 +2,7 @@ import { getTagetFileIds } from "./targets";
 import { deleteFileById } from "./files";
 import { writeLog } from "../logging/writeLog";
 import { normalizeDocumentText } from "./normalizeDocumentText";
+import { saveNormalizedTextFile } from "./text";
 
 /**
  * 入力ファイルIDからドキュメントを作成する。
@@ -73,6 +74,16 @@ export function createDocuments(
     writeLog("開始します。");
     const convertedFileId = createDocument(targetFileId, outputFolderId);
     writeLog(`変換ドキュメントID：[${convertedFileId}]`);
+
+    const convertedFile = DriveApp.getFileById(convertedFileId);
+    const normalizedText = getText(convertedFileId);
+    const normalizedTextFileId = saveNormalizedTextFile(
+      convertedFile.getName(),
+      normalizedText,
+      outputFolderId,
+    );
+    writeLog(`正規化テキストファイルID：[${normalizedTextFileId}]`);
+
     result.push(convertedFileId);
 
     deleteFileById(convertedFileId, convertedFileId);

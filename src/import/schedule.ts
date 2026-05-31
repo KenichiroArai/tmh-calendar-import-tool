@@ -4,6 +4,7 @@ import { writeLog } from "../logging/writeLog";
 import { createDocuments, getText } from "../drive/document";
 import { getTagetFileIds } from "../drive/targets";
 import { deleteFileByName, moveFileToFolder } from "../drive/files";
+import { saveNormalizedTextFile } from "../drive/text";
 import { createCalendarImportFile } from "../calendar/parser";
 import { importCSVtoCalendar } from "../calendar/import";
 import { extractIdFromUrl } from "../utils/url";
@@ -148,6 +149,7 @@ function importConvertedDocumentsToCalendar(
   ctx: ScheduleImportContext,
   state: ScheduleImportState,
   convertedFileIds: string[],
+  saveNormalizedText: boolean,
 ): void {
   writeLog("----- カレンダーへインポートします。 -----");
   for (const convertedFileId of convertedFileIds) {
@@ -158,6 +160,14 @@ function importConvertedDocumentsToCalendar(
     writeLog("開始します。");
     try {
       const text = getText(convertedFileId);
+      if (saveNormalizedText) {
+        const normalizedTextFileId = saveNormalizedTextFile(
+          documentFile.getName(),
+          text,
+          ctx.intermediateFileGenerationFolderId,
+        );
+        writeLog(`正規化テキストファイルID：[${normalizedTextFileId}]`);
+      }
       const fileName = documentFile.getName() + ".csv";
 
       deleteFileByName(fileName);
@@ -270,7 +280,12 @@ export function importSchedule(
       }
     }
 
-    importConvertedDocumentsToCalendar(ctx, state, convertedFileIds);
+    importConvertedDocumentsToCalendar(
+      ctx,
+      state,
+      convertedFileIds,
+      mode === "importOnly",
+    );
 
     if (mode === "all") {
       moveImportTargetsToCompleted(ctx);

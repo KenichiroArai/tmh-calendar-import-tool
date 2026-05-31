@@ -12,6 +12,7 @@ import { writeLog } from "../../src/logging/writeLog";
 import { createDocuments, getText } from "../../src/drive/document";
 import { getTagetFileIds } from "../../src/drive/targets";
 import { deleteFileByName, moveFileToFolder } from "../../src/drive/files";
+import { saveNormalizedTextFile } from "../../src/drive/text";
 import { createCalendarImportFile } from "../../src/calendar/parser";
 import { importCSVtoCalendar } from "../../src/calendar/import";
 
@@ -20,6 +21,7 @@ vi.mock("../../src/logging/writeLog");
 vi.mock("../../src/drive/document");
 vi.mock("../../src/drive/targets");
 vi.mock("../../src/drive/files");
+vi.mock("../../src/drive/text");
 vi.mock("../../src/calendar/parser");
 vi.mock("../../src/calendar/import");
 
@@ -28,11 +30,12 @@ const DOCUMENT_URL =
 const DOCUMENT_ID = "1psjqhg0trmUAtcnrC4mcLlFF7YnxugF0FJNix5bAM4Y";
 
 function setupSuccessfulCalendarImportMocks(): void {
-  vi.mocked(getText).mockReturnValue(" 1/15(月)10:00 会議");
+  vi.mocked(getText).mockReturnValue("■1/15(月)10:00会議");
   vi.mocked(DriveApp.getFileById).mockReturnValue({
-    getName: vi.fn(() => "scan"),
+    getName: vi.fn(() => "scan.png"),
   } as never);
   vi.mocked(createCalendarImportFile).mockReturnValue("csv-1");
+  vi.mocked(saveNormalizedTextFile).mockReturnValue("txt-1");
 }
 
 describe("importSchedule", () => {
@@ -47,6 +50,7 @@ describe("importSchedule", () => {
     vi.mocked(getText).mockReset();
     vi.mocked(getTagetFileIds).mockReset();
     vi.mocked(deleteFileByName).mockReset();
+    vi.mocked(saveNormalizedTextFile).mockReset();
     vi.mocked(createCalendarImportFile).mockReset();
     vi.mocked(importCSVtoCalendar).mockReset();
     vi.mocked(moveFileToFolder).mockReset();
@@ -95,7 +99,8 @@ describe("importSchedule", () => {
 
       importSchedule(DEFAULT_SCHEDULE_IMPORT_RUN);
 
-      expect(deleteFileByName).toHaveBeenCalledWith("scan.csv");
+      expect(deleteFileByName).toHaveBeenCalledWith("scan.png.csv");
+      expect(saveNormalizedTextFile).not.toHaveBeenCalled();
       expect(importCSVtoCalendar).toHaveBeenCalledWith(
         "csv-1",
         "config-CALENDAR_ID",
@@ -221,6 +226,11 @@ describe("importSchedule", () => {
 
       expect(createDocuments).not.toHaveBeenCalled();
       expect(DriveApp.getFileById).toHaveBeenCalledWith(DOCUMENT_ID);
+      expect(saveNormalizedTextFile).toHaveBeenCalledWith(
+        "scan.png",
+        "■1/15(月)10:00会議",
+        "config-INTERMEDIATE_FILE_GENERATION_FOLDER_ID",
+      );
       expect(importCSVtoCalendar).toHaveBeenCalledWith(
         "csv-1",
         "config-CALENDAR_ID",

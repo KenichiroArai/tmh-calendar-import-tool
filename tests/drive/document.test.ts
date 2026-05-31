@@ -6,6 +6,7 @@ import {
 } from "../../src/drive/document";
 import { getTagetFileIds } from "../../src/drive/targets";
 import { deleteFileById } from "../../src/drive/files";
+import { saveNormalizedTextFile } from "../../src/drive/text";
 
 vi.mock("../../src/logging/writeLog", () => ({
   writeLog: vi.fn(),
@@ -17,6 +18,10 @@ vi.mock("../../src/drive/targets", () => ({
 
 vi.mock("../../src/drive/files", () => ({
   deleteFileById: vi.fn(),
+}));
+
+vi.mock("../../src/drive/text", () => ({
+  saveNormalizedTextFile: vi.fn(() => "normalized-text-file-id"),
 }));
 
 const defaultDrive = {
@@ -62,13 +67,13 @@ describe("createDocument", () => {
 });
 
 describe("getText", () => {
-  it("ドキュメントからテキストを取得する", () => {
-    const mockBody = { getText: vi.fn(() => "抽出されたテキスト") };
+  it("ドキュメントからテキストを取得し正規化する", () => {
+    const mockBody = { getText: vi.fn(() => "■ 1/15(月) 10:00 会議") };
     const mockDoc = { getBody: vi.fn(() => mockBody) };
     vi.mocked(DocumentApp.openById).mockReturnValue(mockDoc as never);
 
     const result = getText("doc-id");
-    expect(result).toBe("抽出されたテキスト");
+    expect(result).toBe("■1/15(月)10:00会議");
   });
 });
 
@@ -77,6 +82,7 @@ describe("createDocuments", () => {
     vi.stubGlobal("Drive", defaultDrive);
     vi.mocked(getTagetFileIds).mockReset();
     vi.mocked(deleteFileById).mockReset();
+    vi.mocked(saveNormalizedTextFile).mockReset();
     vi.mocked((Drive as any).Files.copy).mockReset();
     vi.mocked(DriveApp.getFileById).mockReset();
     vi.mocked(DriveApp.getFolderById).mockReset();
@@ -102,11 +108,21 @@ describe("createDocuments", () => {
       moveTo: mockMoveTo,
     } as never);
     vi.mocked(DriveApp.getFolderById).mockReturnValue({} as never);
+    vi.mocked(DocumentApp.openById).mockReturnValue({
+      getBody: vi.fn(() => ({
+        getText: vi.fn(() => "■ 1/15(月) 10:00 会議"),
+      })),
+    } as never);
 
     const result = createDocuments("input-folder-id", "output-folder-id");
 
     expect(result).toEqual(["converted-doc-id"]);
     expect(mockMoveTo).toHaveBeenCalled();
+    expect(saveNormalizedTextFile).toHaveBeenCalledWith(
+      "scan.png",
+      "■1/15(月)10:00会議",
+      "output-folder-id",
+    );
     expect(deleteFileById).toHaveBeenCalledWith(
       "converted-doc-id",
       "converted-doc-id",
