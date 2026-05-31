@@ -1,30 +1,30 @@
 /**
- * ファイルIDからファイルを削除する。
- * @param {string} fileId ファイルID
- * @param {string} excludedFileId 対象外ファイルID
+ * フォルダ内の同名 Google ドキュメントのうち、指定 ID 以外をゴミ箱へ移動する。
+ * OCR 変換で同名ドキュメントが残った場合の整理用。画像など他種別のファイルは対象外。
+ * @param {string} keepFileId 残すファイルID
+ * @param {string} folderId 検索対象フォルダID
  */
-export function deleteFileById(fileId: string, excludedFileId: string): void {
-  // ファイルIDからファイルを取得
-  const file = DriveApp.getFileById(fileId);
+export function deleteDuplicateDocumentsInFolder(
+  keepFileId: string,
+  folderId: string,
+): void {
+  const keepFile = DriveApp.getFileById(keepFileId);
+  const fileName = keepFile.getName();
+  const folder = DriveApp.getFolderById(folderId);
+  const files = folder.getFilesByName(fileName);
 
-  // ファイル名を取得
-  const fileName = file.getName();
-
-  // ファイル名に該当するファイルを検索
-  const files = DriveApp.getFilesByName(fileName);
-
-  // 該当するファイルを削除
   while (files.hasNext()) {
-    const fileToDelete = files.next();
+    const file = files.next();
 
-    // 該当するファイルが対象外か
-    if (fileToDelete.getId() == excludedFileId) {
-      // 対象外の場合
-
+    if (file.getId() === keepFileId) {
       continue;
     }
 
-    fileToDelete.setTrashed(true); // ファイルをゴミ箱に移動
+    if (file.getMimeType() !== MimeType.GOOGLE_DOCS) {
+      continue;
+    }
+
+    file.setTrashed(true);
   }
 }
 

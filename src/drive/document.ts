@@ -1,5 +1,5 @@
 import { getTagetFileIds } from "./targets";
-import { deleteFileById } from "./files";
+import { deleteDuplicateDocumentsInFolder } from "./files";
 import { writeLog } from "../logging/writeLog";
 import { normalizeDocumentText } from "./normalizeDocumentText";
 import { saveNormalizedTextFile } from "./text";
@@ -94,7 +94,7 @@ export function createDocuments(
       convertedFileId,
     });
 
-    deleteFileById(convertedFileId, convertedFileId);
+    deleteDuplicateDocumentsInFolder(convertedFileId, outputFolderId);
     writeLog("終了しました。");
   }
   return result;

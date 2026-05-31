@@ -1,31 +1,79 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { deleteFileById, deleteFileByName, moveFileToFolder } from "../../src/drive/files";
+import {
+  deleteDuplicateDocumentsInFolder,
+  deleteFileByName,
+  moveFileToFolder,
+} from "../../src/drive/files";
 
-describe("deleteFileById", () => {
+describe("deleteDuplicateDocumentsInFolder", () => {
   beforeEach(() => {
     vi.mocked(DriveApp.getFileById).mockReset();
-    vi.mocked(DriveApp.getFilesByName).mockReset();
+    vi.mocked(DriveApp.getFolderById).mockReset();
   });
 
-  it("対象外ファイル以外を削除する", () => {
+  it("フォルダ内の同名 Google ドキュメントのみ削除する", () => {
     const mockSetTrashed = vi.fn();
     vi.mocked(DriveApp.getFileById).mockReturnValue({
-      getName: vi.fn(() => "test-file.png"),
+      getName: vi.fn(() => "scan.png"),
     } as never);
 
     const mockFiles = [
-      { getId: () => "file-1", setTrashed: mockSetTrashed },
-      { getId: () => "excluded-id", setTrashed: vi.fn() },
+      {
+        getId: () => "keep-id",
+        getMimeType: () => MimeType.GOOGLE_DOCS,
+        setTrashed: vi.fn(),
+      },
+      {
+        getId: () => "duplicate-doc-id",
+        getMimeType: () => MimeType.GOOGLE_DOCS,
+        setTrashed: mockSetTrashed,
+      },
+      {
+        getId: () => "source-image-id",
+        getMimeType: () => "image/png",
+        setTrashed: vi.fn(),
+      },
     ];
     let index = 0;
-    vi.mocked(DriveApp.getFilesByName).mockReturnValue({
+    const mockIterator = {
       hasNext: vi.fn(() => index < mockFiles.length),
       next: vi.fn(() => mockFiles[index++]),
+    };
+    vi.mocked(DriveApp.getFolderById).mockReturnValue({
+      getFilesByName: vi.fn(() => mockIterator),
     } as never);
 
-    deleteFileById("file-id", "excluded-id");
+    deleteDuplicateDocumentsInFolder("keep-id", "folder-id");
 
+    expect(mockSetTrashed).toHaveBeenCalledTimes(1);
     expect(mockSetTrashed).toHaveBeenCalledWith(true);
+  });
+
+  it("残すファイル ID のドキュメントは削除しない", () => {
+    const mockSetTrashed = vi.fn();
+    vi.mocked(DriveApp.getFileById).mockReturnValue({
+      getName: vi.fn(() => "scan.png"),
+    } as never);
+
+    const mockFiles = [
+      {
+        getId: () => "keep-id",
+        getMimeType: () => MimeType.GOOGLE_DOCS,
+        setTrashed: mockSetTrashed,
+      },
+    ];
+    let index = 0;
+    const mockIterator = {
+      hasNext: vi.fn(() => index < mockFiles.length),
+      next: vi.fn(() => mockFiles[index++]),
+    };
+    vi.mocked(DriveApp.getFolderById).mockReturnValue({
+      getFilesByName: vi.fn(() => mockIterator),
+    } as never);
+
+    deleteDuplicateDocumentsInFolder("keep-id", "folder-id");
+
+    expect(mockSetTrashed).not.toHaveBeenCalled();
   });
 });
 

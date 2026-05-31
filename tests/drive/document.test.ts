@@ -5,7 +5,7 @@ import {
   createDocuments,
 } from "../../src/drive/document";
 import { getTagetFileIds } from "../../src/drive/targets";
-import { deleteFileById } from "../../src/drive/files";
+import { deleteDuplicateDocumentsInFolder } from "../../src/drive/files";
 import { saveNormalizedTextFile } from "../../src/drive/text";
 
 vi.mock("../../src/logging/writeLog", () => ({
@@ -17,7 +17,7 @@ vi.mock("../../src/drive/targets", () => ({
 }));
 
 vi.mock("../../src/drive/files", () => ({
-  deleteFileById: vi.fn(),
+  deleteDuplicateDocumentsInFolder: vi.fn(),
 }));
 
 vi.mock("../../src/drive/text", () => ({
@@ -81,7 +81,7 @@ describe("createDocuments", () => {
   beforeEach(() => {
     vi.stubGlobal("Drive", defaultDrive);
     vi.mocked(getTagetFileIds).mockReset();
-    vi.mocked(deleteFileById).mockReset();
+    vi.mocked(deleteDuplicateDocumentsInFolder).mockReset();
     vi.mocked(saveNormalizedTextFile).mockReset();
     vi.mocked((Drive as any).Files.copy).mockReset();
     vi.mocked(DriveApp.getFileById).mockReset();
@@ -125,9 +125,9 @@ describe("createDocuments", () => {
       "■1/15(月)10:00会議",
       "output-folder-id",
     );
-    expect(deleteFileById).toHaveBeenCalledWith(
+    expect(deleteDuplicateDocumentsInFolder).toHaveBeenCalledWith(
       "converted-doc-id",
-      "converted-doc-id",
+      "output-folder-id",
     );
   });
 });
